@@ -1,0 +1,25 @@
+# --- Secrets & environment ---
+.env
+*.local
+
+# --- Your actual media + database (NEVER commit these) ---
+/data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# --- Node / build output ---
+node_modules/
+dist/
+build/
+.vite/
+*.log
+npm-debug.log*
+
+# --- OS / editor junk ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
