@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, uploadFiles, formatBytes, type Share, type User, type VaultFile } from './api';
+import {
+  api,
+  uploadFiles,
+  formatBytes,
+  MAX_BATCH,
+  type Share,
+  type UploadProgress,
+  type User,
+  type VaultFile,
+} from './api';
 import Viewer from './Viewer';
 import ShareManager from './ShareManager';
 import ShareLinkModal from './ShareLinkModal';
@@ -10,8 +19,10 @@ import AdminPanel from './AdminPanel';
 export default function Gallery({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [files, setFiles] = useState<VaultFile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploadPct, setUploadPct] = useState<number | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<UploadProgress | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [active, setActive] = useState<VaultFile | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -77,20 +88,40 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
     return () => clearInterval(t);
   }, [pollStatus]);
 
-  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const picked = Array.from(e.target.files ?? []);
+  async function startUpload(picked: File[]) {
     if (picked.length === 0) return;
+    if (picked.length > MAX_BATCH) {
+      setError(`You can upload up to ${MAX_BATCH} files at once (you chose ${picked.length}).`);
+      return;
+    }
     setError('');
-    setUploadPct(0);
+    setNotice('');
+    setUploadStatus({ percent: 0, completed: 0, total: picked.length });
     try {
-      await uploadFiles(picked, setUploadPct);
+      const { uploaded, failed } = await uploadFiles(picked, setUploadStatus);
       await refresh();
+      if (failed > 0) setError(`${failed} file(s) failed. ${uploaded} uploaded.`);
+      else setNotice(`Uploaded ${uploaded} file${uploaded === 1 ? '' : 's'}.`);
     } catch (err) {
       setError((err as Error).message);
     } finally {
-      setUploadPct(null);
+      setUploadStatus(null);
       if (inputRef.current) inputRef.current.value = '';
+      pollStatus();
     }
+  }
+
+  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    startUpload(Array.from(e.target.files ?? []));
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+    const dropped = Array.from(e.dataTransfer.files).filter(
+      (f) => f.type.startsWith('image/') || f.type.startsWith('video/')
+    );
+    startUpload(dropped);
   }
 
   async function logout() {
@@ -146,7 +177,27 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
   const displayed = results ?? files;
 
   return (
-    <div className="mx-auto min-h-full max-w-5xl px-4 pb-24 pt-4">
+    <div
+      className="relative mx-auto min-h-full max-w-5xl px-4 pb-24 pt-4"
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!selecting) setDragging(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        if (e.currentTarget === e.target) setDragging(false);
+      }}
+      onDrop={onDrop}
+    >
+      {dragging && (
+        <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-emerald-500/10 backdrop-blur-sm">
+          <div className="rounded-2xl border-2 border-dashed border-emerald-400/70 bg-ink/80 px-8 py-6 text-center">
+            <div className="text-4xl">⬇️</div>
+            <p className="mt-2 text-lg font-medium text-emerald-300">Drop to upload</p>
+            <p className="text-xs text-slate-400">Images & videos · up to {MAX_BATCH} at once</p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <header className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -213,11 +264,22 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
         </div>
       )}
 
-      {uploadPct !== null && (
+      {notice && !uploadStatus && (
+        <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">
+          {notice}
+        </div>
+      )}
+
+      {uploadStatus && (
         <div className="mb-4">
-          <div className="mb-1 text-sm text-slate-400">Uploading… {uploadPct}%</div>
+          <div className="mb-1 text-sm text-slate-400">
+            Uploading {uploadStatus.completed}/{uploadStatus.total} · {uploadStatus.percent}%
+          </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-            <div className="h-full bg-emerald-500 transition-all" style={{ width: `${uploadPct}%` }} />
+            <div
+              className="h-full bg-emerald-500 transition-all"
+              style={{ width: `${uploadStatus.percent}%` }}
+            />
           </div>
         </div>
       )}

@@ -139,43 +139,70 @@ export const api = {
     request<{ ok: boolean }>('POST', `/api/s/${token}/unlock`, { password }),
 };
 
-// Resumable, chunked uploads via the tus protocol (Uppy client).
-// Big files survive dropped connections and resume instead of restarting.
+export const MAX_BATCH = 1000;
+
+export interface UploadProgress {
+  percent: number; // overall 0-100
+  completed: number; // files finished
+  total: number; // files in this batch
+}
+
+// Resumable, chunked, parallel batch uploads via the tus protocol (Uppy client).
+// Handles up to MAX_BATCH files; big files survive dropped connections.
 export function uploadFiles(
   files: File[],
-  onProgress: (percent: number) => void
-): Promise<void> {
+  onProgress: (p: UploadProgress) => void
+): Promise<{ uploaded: number; failed: number }> {
   return new Promise((resolve, reject) => {
-    const uppy = new Uppy({ autoProceed: true });
+    if (files.length > MAX_BATCH) {
+      reject(new Error(`You can upload up to ${MAX_BATCH} files at once.`));
+      return;
+    }
+
+    const uppy = new Uppy({
+      autoProceed: true,
+      restrictions: { maxNumberOfFiles: MAX_BATCH },
+    });
     uppy.use(Tus, {
       endpoint: '/api/uploads',
       chunkSize: 16 * 1024 * 1024, // 16 MB chunks → fine-grained resume
+      limit: 6, // upload up to 6 files in parallel
       retryDelays: [0, 1000, 3000, 5000, 10000],
     });
 
-    uppy.on('progress', (percent) => onProgress(percent));
+    const total = files.length;
+    let completed = 0;
+
+    uppy.on('upload-success', () => {
+      completed += 1;
+      onProgress({ percent: 100, completed, total });
+    });
+    uppy.on('progress', (percent) => onProgress({ percent, completed, total }));
     uppy.on('complete', (result) => {
-      const failed = result.failed ?? [];
-      if (failed.length > 0) {
-        reject(new Error(failed[0]?.error || 'Upload failed'));
-      } else {
-        resolve();
-      }
+      resolve({
+        uploaded: result.successful?.length ?? 0,
+        failed: result.failed?.length ?? 0,
+      });
       uppy.destroy();
     });
 
-    try {
-      for (const f of files) {
+    // Add files individually so a single duplicate/oddball doesn't abort the batch.
+    for (const f of files) {
+      try {
         uppy.addFile({
           name: f.name,
           type: f.type,
           data: f,
           meta: { filename: f.name, filetype: f.type },
         });
+      } catch {
+        // skipped (e.g. duplicate) — continue with the rest
       }
-    } catch (err) {
+    }
+
+    if (uppy.getFiles().length === 0) {
+      resolve({ uploaded: 0, failed: 0 });
       uppy.destroy();
-      reject(err as Error);
     }
   });
 }
