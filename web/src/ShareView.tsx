@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { api, formatBytes, type ShareResponse, type SharedFile } from './api';
 import Viewer from './Viewer';
+import InstallPrompt from './InstallPrompt';
 
 export default function ShareView() {
   const { token = '' } = useParams();
@@ -90,6 +91,7 @@ export default function ShareView() {
 
   return (
     <div className="mx-auto min-h-full max-w-5xl px-4 pb-16 pt-6">
+      <InstallPrompt />
       <header className="mb-6 text-center">
         <div className="flex items-center justify-center gap-2">
           <span className="text-2xl">🔒</span>

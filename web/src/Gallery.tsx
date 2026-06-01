@@ -4,6 +4,7 @@ import Viewer from './Viewer';
 import ShareManager from './ShareManager';
 import ShareLinkModal from './ShareLinkModal';
 import ShareCreateDialog, { type ShareOptions } from './ShareCreateDialog';
+import InstallPrompt from './InstallPrompt';
 
 export default function Gallery({ onLogout }: { onLogout: () => void }) {
   const [files, setFiles] = useState<VaultFile[]>([]);
@@ -116,6 +117,8 @@ export default function Gallery({ onLogout }: { onLogout: () => void }) {
           </button>
         </div>
       </header>
+
+      <InstallPrompt />
 
       {error && (
         <div className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">
