@@ -17,6 +17,25 @@ export interface VaultFile {
 export interface User {
   id: string;
   username: string;
+  isAdmin: boolean;
+}
+
+export interface Invite {
+  id: string;
+  code: string;
+  path: string; // e.g. /join/abc123
+  used: boolean;
+  usedBy: string | null;
+  expiresAt: number | null;
+  createdAt: number;
+}
+
+export interface Member {
+  id: string;
+  username: string;
+  isAdmin: boolean;
+  createdAt: number;
+  fileCount: number;
 }
 
 export interface Share {
@@ -76,6 +95,19 @@ export const api = {
   login: (username: string, password: string) =>
     request<User>('POST', '/api/auth/login', { username, password }),
   logout: () => request<{ ok: boolean }>('POST', '/api/auth/logout'),
+
+  // --- Invite-based registration ---
+  checkInvite: (code: string) =>
+    request<{ valid: boolean }>('GET', `/api/auth/invite/${code}`),
+  register: (code: string, username: string, password: string) =>
+    request<User>('POST', '/api/auth/register', { code, username, password }),
+
+  // --- Admin: invites & members ---
+  createInvite: (expiresInDays?: number) =>
+    request<{ invite: Invite }>('POST', '/api/admin/invites', { expiresInDays }),
+  listInvites: () => request<{ invites: Invite[] }>('GET', '/api/admin/invites'),
+  revokeInvite: (id: string) => request<void>('DELETE', `/api/admin/invites/${id}`),
+  listMembers: () => request<{ users: Member[] }>('GET', '/api/admin/users'),
   list: () => request<{ files: VaultFile[] }>('GET', '/api/files'),
   remove: (id: string) => request<void>('DELETE', `/api/files/${id}`),
   verifyOnServer: (id: string) =>

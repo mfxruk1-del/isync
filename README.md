@@ -12,14 +12,15 @@ Runs entirely on your own Linux VPS via Docker. HTTPS is automatic (Caddy).
 
 ## Build roadmap
 
-| Phase | What it delivers |
-|-------|------------------|
-| **0** | Foundation: secure `https://yourdomain` live (placeholder page). ← *current* |
-| **1** | Lossless image upload + download, gallery, owner login, installable PWA. |
-| **2** | Selective share links for app users. |
-| **3** | Video support with resumable uploads. |
-| **4** | Public preview page for people without the app. |
-| **5** | Automated backups + multi-user accounts. |
+| Phase | What it delivers | Status |
+|-------|------------------|--------|
+| **0** | Foundation: secure `https://yourdomain` live. | ✅ |
+| **1** | Lossless image upload + download, gallery, owner login, installable PWA. | ✅ |
+| **2** | Selective share links (+ expiry + password). | ✅ |
+| **3** | Video support with resumable (tus) uploads. | ✅ |
+| **4** | Public install prompt + open-in-app link capturing. | ✅ |
+| **5** | Multi-user accounts via invite links. | ✅ |
+| — | Automated off-site backups. | ⏸️ deferred |
 
 Full details: `../.claude/plans/i-want-to-build-steady-cook.md`
 

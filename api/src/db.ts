@@ -58,6 +58,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_shares_owner ON shares(owner_id, created_at DESC);
 `);
 
+// Invite links let an admin add family/friends without open registration.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS invites (
+    id          TEXT PRIMARY KEY,
+    code        TEXT UNIQUE NOT NULL,
+    created_by  TEXT NOT NULL,
+    used_by     TEXT,              -- NULL until someone signs up with it
+    created_at  INTEGER NOT NULL,
+    expires_at  INTEGER,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+  );
+`);
+
 // --- Lightweight migrations (safe to run every startup) ---
 // Add password_hash to shares if an older database doesn't have it yet.
 const shareCols = db.prepare('PRAGMA table_info(shares)').all() as { name: string }[];
@@ -65,12 +78,28 @@ if (!shareCols.some((c) => c.name === 'password_hash')) {
   db.exec('ALTER TABLE shares ADD COLUMN password_hash TEXT');
 }
 
+// Add is_admin to users for existing databases.
+const userCols = db.prepare('PRAGMA table_info(users)').all() as { name: string }[];
+if (!userCols.some((c) => c.name === 'is_admin')) {
+  db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
+}
+
 // --- Types describing a row, for convenience ---
 export interface UserRow {
   id: string;
   username: string;
   password_hash: string;
+  is_admin: number;
   created_at: number;
+}
+
+export interface InviteRow {
+  id: string;
+  code: string;
+  created_by: string;
+  used_by: string | null;
+  created_at: number;
+  expires_at: number | null;
 }
 
 export interface FileRow {

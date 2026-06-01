@@ -20,11 +20,25 @@ export function ensureOwner() {
 
   if (!existing) {
     db.prepare(
-      'INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)'
+      'INSERT INTO users (id, username, password_hash, is_admin, created_at) VALUES (?, ?, ?, 1, ?)'
     ).run(nanoid(16), config.ownerUsername, hash, Date.now());
   } else {
-    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, existing.id);
+    // Keep the owner's password in sync with .env and ensure they're an admin.
+    db.prepare('UPDATE users SET password_hash = ?, is_admin = 1 WHERE id = ?').run(
+      hash,
+      existing.id
+    );
   }
+}
+
+// Create a brand-new account (used when someone signs up with an invite).
+export function createUser(username: string, password: string, isAdmin = false): UserRow {
+  const id = nanoid(16);
+  const hash = bcrypt.hashSync(password, 10);
+  db.prepare(
+    'INSERT INTO users (id, username, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?, ?)'
+  ).run(id, username, hash, isAdmin ? 1 : 0, Date.now());
+  return findUserById(id)!;
 }
 
 export function findUserByUsername(username: string): UserRow | undefined {
@@ -69,5 +83,14 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply) {
   if (!uid || !findUserById(uid)) {
     return reply.code(401).send({ error: 'Not logged in' });
   }
+  (req as any).userId = uid;
+}
+
+// preHandler guard: must be logged in AND an admin.
+export async function requireAdmin(req: FastifyRequest, reply: FastifyReply) {
+  const uid = currentUserId(req);
+  const user = uid ? findUserById(uid) : undefined;
+  if (!user) return reply.code(401).send({ error: 'Not logged in' });
+  if (!user.is_admin) return reply.code(403).send({ error: 'Admins only' });
   (req as any).userId = uid;
 }

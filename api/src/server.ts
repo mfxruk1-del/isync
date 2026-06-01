@@ -10,6 +10,7 @@ import fileRoutes from './routes/files';
 import shareRoutes from './routes/shares';
 import publicRoutes from './routes/public';
 import uploadRoutes from './routes/uploads';
+import adminRoutes from './routes/admin';
 
 const app = Fastify({
   logger: true,
@@ -35,6 +36,7 @@ async function main() {
   await app.register(shareRoutes);
   await app.register(publicRoutes); // public, token-based (no login)
   await app.register(uploadRoutes); // resumable (tus) uploads
+  await app.register(adminRoutes); // admin-only: invites & members
 
   // Serve the built frontend (the PWA) as static files.
   await app.register(fastifyStatic, {

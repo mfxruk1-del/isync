@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, uploadFiles, formatBytes, type Share, type VaultFile } from './api';
+import { api, uploadFiles, formatBytes, type Share, type User, type VaultFile } from './api';
 import Viewer from './Viewer';
 import ShareManager from './ShareManager';
 import ShareLinkModal from './ShareLinkModal';
 import ShareCreateDialog, { type ShareOptions } from './ShareCreateDialog';
 import InstallPrompt from './InstallPrompt';
+import AdminPanel from './AdminPanel';
 
-export default function Gallery({ onLogout }: { onLogout: () => void }) {
+export default function Gallery({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [files, setFiles] = useState<VaultFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadPct, setUploadPct] = useState<number | null>(null);
@@ -20,6 +21,7 @@ export default function Gallery({ onLogout }: { onLogout: () => void }) {
   const [showCreate, setShowCreate] = useState(false);
   const [newShare, setNewShare] = useState<Share | null>(null);
   const [showShares, setShowShares] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   async function refresh() {
     const { files } = await api.list();
@@ -106,6 +108,14 @@ export default function Gallery({ onLogout }: { onLogout: () => void }) {
           <h1 className="text-xl font-semibold">Vault</h1>
         </div>
         <div className="flex items-center gap-2 text-sm text-slate-400">
+          {user.isAdmin && (
+            <button
+              onClick={() => setShowAdmin(true)}
+              className="rounded-lg border border-white/10 px-3 py-1.5 hover:bg-white/5"
+            >
+              People
+            </button>
+          )}
           <button
             onClick={() => setShowShares(true)}
             className="rounded-lg border border-white/10 px-3 py-1.5 hover:bg-white/5"
@@ -274,6 +284,7 @@ export default function Gallery({ onLogout }: { onLogout: () => void }) {
       )}
       {newShare && <ShareLinkModal share={newShare} onClose={() => setNewShare(null)} />}
       {showShares && <ShareManager onClose={() => setShowShares(false)} />}
+      {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
     </div>
   );
 }
