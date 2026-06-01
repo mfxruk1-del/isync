@@ -5,6 +5,7 @@ import { db, type FileRow } from '../db';
 import { requireAuth } from '../auth';
 import { serveFile } from '../serveFile';
 import { insertFileRecord } from '../library';
+import { enqueueIndex } from '../indexer';
 import {
   storeUpload,
   hashStoredFile,
@@ -57,6 +58,7 @@ export default async function fileRoutes(app: FastifyInstance) {
         height: stored.height,
         hasThumb: stored.hasThumb,
       });
+      enqueueIndex(row.id); // make it searchable in the background
       saved.push(toClient(row));
     }
 

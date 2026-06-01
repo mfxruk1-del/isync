@@ -11,6 +11,8 @@ import shareRoutes from './routes/shares';
 import publicRoutes from './routes/public';
 import uploadRoutes from './routes/uploads';
 import adminRoutes from './routes/admin';
+import searchRoutes from './routes/search';
+import { startIndexer } from './indexer';
 
 const app = Fastify({
   logger: true,
@@ -37,6 +39,7 @@ async function main() {
   await app.register(publicRoutes); // public, token-based (no login)
   await app.register(uploadRoutes); // resumable (tus) uploads
   await app.register(adminRoutes); // admin-only: invites & members
+  await app.register(searchRoutes); // AI + OCR search
 
   // Serve the built frontend (the PWA) as static files.
   await app.register(fastifyStatic, {
@@ -54,6 +57,9 @@ async function main() {
   });
 
   await app.listen({ port: config.port, host: '0.0.0.0' });
+
+  // Kick off background AI indexing of any not-yet-indexed files.
+  startIndexer();
 }
 
 main().catch((err) => {

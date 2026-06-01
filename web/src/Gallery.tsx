@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, uploadFiles, formatBytes, type Share, type User, type VaultFile } from './api';
 import Viewer from './Viewer';
 import ShareManager from './ShareManager';
@@ -23,6 +23,12 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
   const [showShares, setShowShares] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
 
+  // Search + indexing state
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<VaultFile[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [pending, setPending] = useState(0);
+
   async function refresh() {
     const { files } = await api.list();
     setFiles(files);
@@ -33,6 +39,43 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false));
   }, []);
+
+  // Debounced search: empty query shows the full gallery.
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setResults(null);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const { files } = await api.search(q);
+        setResults(files);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Poll indexing progress (so we can show "indexing…" while it catches up).
+  const pollStatus = useCallback(async () => {
+    try {
+      const s = await api.indexStatus();
+      setPending(s.aiDisabled ? 0 : s.pending);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  useEffect(() => {
+    pollStatus();
+    const t = setInterval(pollStatus, 6000);
+    return () => clearInterval(t);
+  }, [pollStatus]);
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(e.target.files ?? []);
@@ -99,6 +142,9 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
     }
   }
 
+  const isSearch = results !== null;
+  const displayed = results ?? files;
+
   return (
     <div className="mx-auto min-h-full max-w-5xl px-4 pb-24 pt-4">
       {/* Header */}
@@ -130,6 +176,37 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
 
       <InstallPrompt />
 
+      {/* Search */}
+      <div className="mb-3">
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+            🔍
+          </span>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search your photos & videos (e.g. cat, beach, a name…)"
+            className="w-full rounded-xl border border-white/10 bg-black/30 py-2.5 pl-10 pr-9 text-sm outline-none focus:border-emerald-400/60"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-slate-400 hover:bg-white/5"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      {pending > 0 && (
+        <div className="mb-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-400">
+          🧠 Making {pending} item{pending === 1 ? '' : 's'} searchable… (search works as
+          they finish)
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">
           {error}
@@ -146,9 +223,11 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
       )}
 
       {/* Toolbar */}
-      {files.length > 0 && (
+      {displayed.length > 0 && (
         <div className="mb-3 flex items-center justify-between text-sm">
-          <span className="text-slate-400">{files.length} item(s)</span>
+          <span className="text-slate-400">
+            {isSearch ? `${displayed.length} result${displayed.length === 1 ? '' : 's'}` : `${files.length} item(s)`}
+          </span>
           {selecting ? (
             <button onClick={cancelSelecting} className="text-slate-300 hover:underline">
               Cancel
@@ -164,14 +243,21 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
       {/* Gallery */}
       {loading ? (
         <p className="text-slate-400">Loading…</p>
-      ) : files.length === 0 ? (
+      ) : isSearch && searching && displayed.length === 0 ? (
+        <p className="mt-16 text-center text-slate-400">Searching…</p>
+      ) : isSearch && displayed.length === 0 ? (
+        <div className="mt-16 text-center text-slate-400">
+          <p className="text-lg">No matches for “{query.trim()}”</p>
+          <p className="mt-1 text-sm">Try a different word, or wait for indexing to finish.</p>
+        </div>
+      ) : !isSearch && files.length === 0 ? (
         <div className="mt-16 text-center text-slate-400">
           <p className="text-lg">No photos yet</p>
           <p className="mt-1 text-sm">Tap the + button to upload your first lossless image.</p>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-          {files.map((f) => {
+          {displayed.map((f) => {
             const isSel = selected.has(f.id);
             return (
               <button

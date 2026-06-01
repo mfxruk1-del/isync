@@ -84,6 +84,19 @@ if (!userCols.some((c) => c.name === 'is_admin')) {
   db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
 }
 
+// Add AI-search columns to files: a CLIP embedding (vector), OCR text, and a
+// timestamp marking when the file was processed by the indexer.
+const fileCols2 = db.prepare('PRAGMA table_info(files)').all() as { name: string }[];
+if (!fileCols2.some((c) => c.name === 'embedding')) {
+  db.exec('ALTER TABLE files ADD COLUMN embedding BLOB');
+}
+if (!fileCols2.some((c) => c.name === 'ocr_text')) {
+  db.exec('ALTER TABLE files ADD COLUMN ocr_text TEXT');
+}
+if (!fileCols2.some((c) => c.name === 'indexed_at')) {
+  db.exec('ALTER TABLE files ADD COLUMN indexed_at INTEGER');
+}
+
 // --- Types describing a row, for convenience ---
 export interface UserRow {
   id: string;
@@ -113,6 +126,9 @@ export interface FileRow {
   height: number | null;
   has_thumb: number;
   created_at: number;
+  embedding: Buffer | null;
+  ocr_text: string | null;
+  indexed_at: number | null;
 }
 
 export interface ShareRow {

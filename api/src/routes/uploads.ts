@@ -13,6 +13,7 @@ import { paths } from '../config';
 import { currentUserId, findUserById } from '../auth';
 import { originalPath, hashStoredFile, generateThumbnail } from '../storage';
 import { insertFileRecord } from '../library';
+import { enqueueIndex } from '../indexer';
 
 const TUS_PATH = '/api/uploads';
 
@@ -57,6 +58,7 @@ export default async function uploadRoutes(app: FastifyInstance) {
         height,
         hasThumb,
       });
+      enqueueIndex(fileId); // make it searchable in the background
 
       return res;
     },

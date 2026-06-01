@@ -13,11 +13,13 @@
     "@fastify/static": "^7.0.4",
     "@tus/file-store": "^1.5.0",
     "@tus/server": "^1.8.0",
+    "@xenova/transformers": "^2.17.2",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.3.0",
     "fastify": "^4.28.1",
     "nanoid": "^5.0.7",
     "sharp": "^0.33.5",
+    "tesseract.js": "^5.1.1",
     "tsx": "^4.19.1"
   },
   "devDependencies": {

@@ -25,9 +25,11 @@ export const paths = {
   thumbs: path.join(config.dataDir, 'thumbs'),
   // Temp area where resumable (tus) uploads are assembled before ingest.
   uploadsTmp: path.join(config.dataDir, 'uploads'),
+  // Cache for downloaded AI models + OCR language data (persists across restarts).
+  models: path.join(config.dataDir, 'models'),
 };
 
 // Make sure the data folders exist before anything else runs.
-for (const dir of [config.dataDir, paths.originals, paths.thumbs, paths.uploadsTmp]) {
+for (const dir of [config.dataDir, paths.originals, paths.thumbs, paths.uploadsTmp, paths.models]) {
   mkdirSync(dir, { recursive: true });
 }

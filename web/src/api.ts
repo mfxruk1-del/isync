@@ -108,6 +108,15 @@ export const api = {
   listInvites: () => request<{ invites: Invite[] }>('GET', '/api/admin/invites'),
   revokeInvite: (id: string) => request<void>('DELETE', `/api/admin/invites/${id}`),
   listMembers: () => request<{ users: Member[] }>('GET', '/api/admin/users'),
+
+  // --- AI / OCR search ---
+  search: (q: string) =>
+    request<{ files: VaultFile[] }>('GET', `/api/search?q=${encodeURIComponent(q)}`),
+  indexStatus: () =>
+    request<{ total: number; indexed: number; pending: number; aiDisabled: boolean }>(
+      'GET',
+      '/api/index/status'
+    ),
   list: () => request<{ files: VaultFile[] }>('GET', '/api/files'),
   remove: (id: string) => request<void>('DELETE', `/api/files/${id}`),
   verifyOnServer: (id: string) =>
