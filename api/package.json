@@ -11,6 +11,8 @@
     "@fastify/cookie": "^9.4.0",
     "@fastify/multipart": "^8.3.0",
     "@fastify/static": "^7.0.4",
+    "@tus/file-store": "^1.5.0",
+    "@tus/server": "^1.8.0",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.3.0",
     "fastify": "^4.28.1",

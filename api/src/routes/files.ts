@@ -3,6 +3,8 @@ import { createReadStream } from 'node:fs';
 import type { FastifyInstance } from 'fastify';
 import { db, type FileRow } from '../db';
 import { requireAuth } from '../auth';
+import { serveFile } from '../serveFile';
+import { insertFileRecord } from '../library';
 import {
   storeUpload,
   hashStoredFile,
@@ -43,25 +45,18 @@ export default async function fileRoutes(app: FastifyInstance) {
 
     // Stream through each uploaded file part, storing bytes exactly.
     for await (const part of req.files()) {
-      const stored = await storeUpload(part.file);
-      const now = Date.now();
-      db.prepare(
-        `INSERT INTO files
-         (id, owner_id, original_name, mime_type, size_bytes, sha256, width, height, has_thumb, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).run(
-        stored.id,
+      const stored = await storeUpload(part.file, part.mimetype);
+      const row = insertFileRecord({
+        id: stored.id,
         ownerId,
-        part.filename,
-        part.mimetype,
-        stored.size,
-        stored.sha256,
-        stored.width,
-        stored.height,
-        stored.hasThumb ? 1 : 0,
-        now
-      );
-      const row = getOwnedFile(stored.id, ownerId)!;
+        originalName: part.filename,
+        mimeType: part.mimetype,
+        size: stored.size,
+        sha256: stored.sha256,
+        width: stored.width,
+        height: stored.height,
+        hasThumb: stored.hasThumb,
+      });
       saved.push(toClient(row));
     }
 
@@ -100,14 +95,14 @@ export default async function fileRoutes(app: FastifyInstance) {
     const file = getOwnedFile(id, ownerId);
     if (!file) return reply.code(404).send({ error: 'Not found' });
 
-    const disposition = inline ? 'inline' : 'attachment';
-    const safeName = encodeURIComponent(file.original_name);
-    reply.header('Content-Type', file.mime_type || 'application/octet-stream');
-    reply.header('Content-Length', file.size_bytes);
-    reply.header('Content-Disposition', `${disposition}; filename*=UTF-8''${safeName}`);
-    // Expose the recorded checksum so the browser can verify a lossless download.
-    reply.header('X-Checksum-SHA256', file.sha256);
-    return reply.send(createReadStream(originalPath(id)));
+    return serveFile(req, reply, {
+      path: originalPath(id),
+      size: file.size_bytes,
+      mime: file.mime_type,
+      filename: file.original_name,
+      sha256: file.sha256,
+      inline: !!inline,
+    });
   });
 
   // --- Prove integrity: re-hash the stored original and compare ---

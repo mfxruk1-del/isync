@@ -77,6 +77,7 @@ export default function ShareManager({ onClose }: { onClose: () => void }) {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm">
+                      {s.hasPassword && <span title="Password protected">🔐 </span>}
                       {s.itemCount} item{s.itemCount === 1 ? '' : 's'}
                     </p>
                     <p className="truncate text-xs text-slate-500">

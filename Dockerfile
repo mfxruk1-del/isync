@@ -17,9 +17,9 @@ FROM node:20-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Build tools needed to compile native modules (better-sqlite3, sharp).
+# Build tools for native modules (better-sqlite3, sharp) + ffmpeg for video thumbnails.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 make g++ \
+ && apt-get install -y --no-install-recommends python3 make g++ ffmpeg \
  && rm -rf /var/lib/apt/lists/*
 
 COPY api/package*.json ./

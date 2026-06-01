@@ -12,6 +12,7 @@ import path from 'node:path';
 import { nanoid } from 'nanoid';
 import sharp from 'sharp';
 import { paths } from './config';
+import { extractVideoFrame } from './video';
 
 export function originalPath(id: string) {
   return path.join(paths.originals, id);
@@ -30,7 +31,10 @@ export interface StoredFile {
 }
 
 // Stream an upload to disk while hashing it in one pass (no extra memory).
-export async function storeUpload(fileStream: Readable): Promise<StoredFile> {
+export async function storeUpload(
+  fileStream: Readable,
+  mimeType: string
+): Promise<StoredFile> {
   const id = nanoid(16);
   const dest = originalPath(id);
   const hash = createHash('sha256');
@@ -47,27 +51,49 @@ export async function storeUpload(fileStream: Readable): Promise<StoredFile> {
 
   const sha256 = hash.digest('hex');
   const { size } = await stat(dest);
+  const { width, height, hasThumb } = await generateThumbnail(id, mimeType);
 
-  // Try to read image dimensions + make a small thumbnail (originals untouched).
+  return { id, sha256, size, width, height, hasThumb };
+}
+
+// Make a small preview thumbnail for an already-stored original.
+// The ORIGINAL is never modified. Used by both the normal and resumable uploads.
+export async function generateThumbnail(
+  id: string,
+  mimeType: string
+): Promise<{ width: number | null; height: number | null; hasThumb: boolean }> {
+  const dest = originalPath(id);
   let width: number | null = null;
   let height: number | null = null;
   let hasThumb = false;
   try {
-    const meta = await sharp(dest).metadata();
-    width = meta.width ?? null;
-    height = meta.height ?? null;
-
-    await sharp(dest)
-      .rotate() // auto-orient the THUMBNAIL using EXIF; original is not changed
-      .resize(640, 640, { fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 82 })
-      .toFile(thumbPath(id));
-    hasThumb = true;
+    if (mimeType.startsWith('image/')) {
+      const meta = await sharp(dest).metadata();
+      width = meta.width ?? null;
+      height = meta.height ?? null;
+      await sharp(dest)
+        .rotate() // auto-orient using EXIF (thumbnail only)
+        .resize(640, 640, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toFile(thumbPath(id));
+      hasThumb = true;
+    } else if (mimeType.startsWith('video/')) {
+      const frame = await extractVideoFrame(dest);
+      if (frame) {
+        const meta = await sharp(frame).metadata();
+        width = meta.width ?? null;
+        height = meta.height ?? null;
+        await sharp(frame)
+          .resize(640, 640, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 82 })
+          .toFile(thumbPath(id));
+        hasThumb = true;
+      }
+    }
   } catch {
-    // Not an image sharp can read (or a video) — fine, we just skip the thumbnail.
+    // Couldn't make a thumbnail — fine, the file is still stored losslessly.
   }
-
-  return { id, sha256, size, width, height, hasThumb };
+  return { width, height, hasThumb };
 }
 
 // Re-hash a stored original to PROVE it still matches what we recorded.

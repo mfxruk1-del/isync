@@ -23,9 +23,11 @@ export const paths = {
   db: path.join(config.dataDir, 'app.db'),
   originals: path.join(config.dataDir, 'originals'),
   thumbs: path.join(config.dataDir, 'thumbs'),
+  // Temp area where resumable (tus) uploads are assembled before ingest.
+  uploadsTmp: path.join(config.dataDir, 'uploads'),
 };
 
 // Make sure the data folders exist before anything else runs.
-for (const dir of [config.dataDir, paths.originals, paths.thumbs]) {
+for (const dir of [config.dataDir, paths.originals, paths.thumbs, paths.uploadsTmp]) {
   mkdirSync(dir, { recursive: true });
 }

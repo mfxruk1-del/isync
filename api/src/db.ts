@@ -58,6 +58,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_shares_owner ON shares(owner_id, created_at DESC);
 `);
 
+// --- Lightweight migrations (safe to run every startup) ---
+// Add password_hash to shares if an older database doesn't have it yet.
+const shareCols = db.prepare('PRAGMA table_info(shares)').all() as { name: string }[];
+if (!shareCols.some((c) => c.name === 'password_hash')) {
+  db.exec('ALTER TABLE shares ADD COLUMN password_hash TEXT');
+}
+
 // --- Types describing a row, for convenience ---
 export interface UserRow {
   id: string;
@@ -85,5 +92,6 @@ export interface ShareRow {
   owner_id: string;
   title: string | null;
   expires_at: number | null;
+  password_hash: string | null;
   created_at: number;
 }

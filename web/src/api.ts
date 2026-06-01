@@ -1,4 +1,6 @@
 // Tiny client for talking to our backend. Cookies (login) ride along automatically.
+import Uppy from '@uppy/core';
+import Tus from '@uppy/tus';
 
 export interface VaultFile {
   id: string;
@@ -23,6 +25,7 @@ export interface Share {
   path: string; // e.g. /s/abc123
   title: string | null;
   expiresAt: number | null;
+  hasPassword: boolean;
   createdAt: number;
   itemCount: number;
 }
@@ -39,12 +42,16 @@ export interface SharedFile {
   hasThumb: boolean;
 }
 
-export interface ShareContents {
-  title: string | null;
-  createdAt: number;
-  expiresAt: number | null;
-  files: SharedFile[];
-}
+// A protected share returns { locked: true } until the password is provided.
+export type ShareResponse =
+  | { locked: true }
+  | {
+      locked: false;
+      title: string | null;
+      createdAt: number;
+      expiresAt: number | null;
+      files: SharedFile[];
+    };
 
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -78,43 +85,57 @@ export const api = {
     ),
 
   // --- Shares (owner) ---
-  createShare: (fileIds: string[], opts?: { title?: string; expiresInDays?: number }) =>
-    request<{ share: Share }>('POST', '/api/shares', { fileIds, ...opts }),
+  createShare: (
+    fileIds: string[],
+    opts?: { title?: string; expiresInDays?: number; password?: string }
+  ) => request<{ share: Share }>('POST', '/api/shares', { fileIds, ...opts }),
   listShares: () => request<{ shares: Share[] }>('GET', '/api/shares'),
   revokeShare: (id: string) => request<void>('DELETE', `/api/shares/${id}`),
 
   // --- Public share (no login) ---
-  getShare: (token: string) => request<ShareContents>('GET', `/api/s/${token}`),
+  getShare: (token: string) => request<ShareResponse>('GET', `/api/s/${token}`),
+  unlockShare: (token: string, password: string) =>
+    request<{ ok: boolean }>('POST', `/api/s/${token}/unlock`, { password }),
 };
 
-// Upload with progress, using XHR (fetch can't report upload progress).
+// Resumable, chunked uploads via the tus protocol (Uppy client).
+// Big files survive dropped connections and resume instead of restarting.
 export function uploadFiles(
   files: File[],
   onProgress: (percent: number) => void
-): Promise<{ files: VaultFile[] }> {
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    const form = new FormData();
-    for (const f of files) form.append('files', f, f.name);
+    const uppy = new Uppy({ autoProceed: true });
+    uppy.use(Tus, {
+      endpoint: '/api/uploads',
+      chunkSize: 16 * 1024 * 1024, // 16 MB chunks → fine-grained resume
+      retryDelays: [0, 1000, 3000, 5000, 10000],
+    });
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/files');
-    xhr.withCredentials = true;
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(JSON.parse(xhr.responseText));
+    uppy.on('progress', (percent) => onProgress(percent));
+    uppy.on('complete', (result) => {
+      const failed = result.failed ?? [];
+      if (failed.length > 0) {
+        reject(new Error(failed[0]?.error || 'Upload failed'));
       } else {
-        try {
-          reject(new Error(JSON.parse(xhr.responseText).error || 'Upload failed'));
-        } catch {
-          reject(new Error('Upload failed'));
-        }
+        resolve();
       }
-    };
-    xhr.onerror = () => reject(new Error('Network error during upload'));
-    xhr.send(form);
+      uppy.destroy();
+    });
+
+    try {
+      for (const f of files) {
+        uppy.addFile({
+          name: f.name,
+          type: f.type,
+          data: f,
+          meta: { filename: f.name, filetype: f.type },
+        });
+      }
+    } catch (err) {
+      uppy.destroy();
+      reject(err as Error);
+    }
   });
 }
 

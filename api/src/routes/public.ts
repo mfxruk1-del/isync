@@ -1,9 +1,11 @@
 // Public share access — NO login required, reached only via the secret token.
 // Critical rule: a token can ONLY ever expose the files in its own share.
 import { createReadStream } from 'node:fs';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import bcrypt from 'bcryptjs';
 import { db, type FileRow, type ShareRow } from '../db';
 import { originalPath, thumbPath } from '../storage';
+import { serveFile } from '../serveFile';
 
 function getLiveShare(token: string): ShareRow | null {
   const share = db.prepare('SELECT * FROM shares WHERE token = ?').get(token) as
@@ -23,6 +25,26 @@ function getSharedFile(shareId: string, fileId: string): FileRow | undefined {
        WHERE si.share_id = ? AND f.id = ?`
     )
     .get(shareId, fileId) as FileRow | undefined;
+}
+
+// Has the visitor unlocked this password-protected share? (via the unlock cookie)
+function isUnlocked(req: FastifyRequest, share: ShareRow): boolean {
+  if (!share.password_hash) return true; // no password = always open
+  const raw = req.cookies?.[`u_${share.token}`];
+  if (!raw) return false;
+  const result = req.unsignCookie(raw);
+  return result.valid && result.value === '1';
+}
+
+function setUnlocked(reply: FastifyReply, token: string) {
+  reply.setCookie(`u_${token}`, '1', {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    signed: true,
+    maxAge: 60 * 60 * 12, // 12 hours
+  });
 }
 
 function toPublic(f: FileRow) {
@@ -45,6 +67,11 @@ export default async function publicRoutes(app: FastifyInstance) {
     const share = getLiveShare(token);
     if (!share) return reply.code(404).send({ error: 'This link is invalid or has expired' });
 
+    // Password-protected and not yet unlocked → tell the page to ask for it.
+    if (!isUnlocked(req, share)) {
+      return { locked: true };
+    }
+
     const files = db
       .prepare(
         `SELECT f.* FROM files f
@@ -55,6 +82,7 @@ export default async function publicRoutes(app: FastifyInstance) {
       .all(share.id) as FileRow[];
 
     return {
+      locked: false,
       title: share.title,
       createdAt: share.created_at,
       expiresAt: share.expires_at,
@@ -62,15 +90,29 @@ export default async function publicRoutes(app: FastifyInstance) {
     };
   });
 
+  // Submit a password to unlock a protected share.
+  app.post('/api/s/:token/unlock', async (req, reply) => {
+    const { token } = req.params as { token: string };
+    const { password } = (req.body ?? {}) as { password?: string };
+    const share = getLiveShare(token);
+    if (!share) return reply.code(404).send({ error: 'Invalid link' });
+    if (!share.password_hash) return { ok: true }; // nothing to unlock
+    if (!password || !bcrypt.compareSync(password, share.password_hash)) {
+      return reply.code(401).send({ error: 'Wrong password' });
+    }
+    setUnlocked(reply, token);
+    return { ok: true };
+  });
+
   // Thumbnail of a shared item.
   app.get('/api/s/:token/items/:fileId/thumb', async (req, reply) => {
     const { token, fileId } = req.params as { token: string; fileId: string };
     const share = getLiveShare(token);
-    if (!share) return reply.code(404).send({ error: 'Invalid link' });
+    if (!share || !isUnlocked(req, share)) return reply.code(404).send({ error: 'Invalid link' });
     const file = getSharedFile(share.id, fileId);
     if (!file || !file.has_thumb) return reply.code(404).send({ error: 'No thumbnail' });
     reply.header('Content-Type', 'image/webp');
-    reply.header('Cache-Control', 'public, max-age=86400');
+    reply.header('Cache-Control', 'private, max-age=86400');
     return reply.send(createReadStream(thumbPath(fileId)));
   });
 
@@ -79,16 +121,17 @@ export default async function publicRoutes(app: FastifyInstance) {
     const { token, fileId } = req.params as { token: string; fileId: string };
     const { inline } = req.query as { inline?: string };
     const share = getLiveShare(token);
-    if (!share) return reply.code(404).send({ error: 'Invalid link' });
+    if (!share || !isUnlocked(req, share)) return reply.code(404).send({ error: 'Invalid link' });
     const file = getSharedFile(share.id, fileId);
     if (!file) return reply.code(404).send({ error: 'Not found' });
 
-    const disposition = inline ? 'inline' : 'attachment';
-    const safeName = encodeURIComponent(file.original_name);
-    reply.header('Content-Type', file.mime_type || 'application/octet-stream');
-    reply.header('Content-Length', file.size_bytes);
-    reply.header('Content-Disposition', `${disposition}; filename*=UTF-8''${safeName}`);
-    reply.header('X-Checksum-SHA256', file.sha256);
-    return reply.send(createReadStream(originalPath(fileId)));
+    return serveFile(req, reply, {
+      path: originalPath(fileId),
+      size: file.size_bytes,
+      mime: file.mime_type,
+      filename: file.original_name,
+      sha256: file.sha256,
+      inline: !!inline,
+    });
   });
 }

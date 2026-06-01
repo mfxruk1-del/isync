@@ -1,6 +1,7 @@
 // Owner-only endpoints to create, list, and revoke share links.
 import type { FastifyInstance } from 'fastify';
 import { nanoid } from 'nanoid';
+import bcrypt from 'bcryptjs';
 import { db, type ShareRow } from '../db';
 import { requireAuth } from '../auth';
 
@@ -18,6 +19,7 @@ function toClient(s: ShareRow) {
     path: `/s/${s.token}`, // the front-end turns this into a full URL
     title: s.title,
     expiresAt: s.expires_at,
+    hasPassword: !!s.password_hash,
     createdAt: s.created_at,
     itemCount: shareItemCount(s.id),
   };
@@ -33,6 +35,7 @@ export default async function shareRoutes(app: FastifyInstance) {
       fileIds?: string[];
       title?: string;
       expiresInDays?: number;
+      password?: string;
     };
     const fileIds = Array.isArray(body.fileIds) ? body.fileIds : [];
     if (fileIds.length === 0) {
@@ -54,14 +57,16 @@ export default async function shareRoutes(app: FastifyInstance) {
       body.expiresInDays && body.expiresInDays > 0
         ? now + body.expiresInDays * 24 * 60 * 60 * 1000
         : null;
+    const passwordHash =
+      body.password && body.password.length > 0 ? bcrypt.hashSync(body.password, 10) : null;
 
     const insertShare = db.prepare(
-      'INSERT INTO shares (id, token, owner_id, title, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO shares (id, token, owner_id, title, expires_at, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
     const insertItem = db.prepare('INSERT INTO share_items (share_id, file_id) VALUES (?, ?)');
 
     const tx = db.transaction(() => {
-      insertShare.run(id, token, ownerId, body.title ?? null, expiresAt, now);
+      insertShare.run(id, token, ownerId, body.title ?? null, expiresAt, passwordHash, now);
       for (const f of owned) insertItem.run(id, f.id);
     });
     tx();

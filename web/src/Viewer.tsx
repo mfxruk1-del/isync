@@ -29,10 +29,28 @@ export default function Viewer({
   const [busy, setBusy] = useState(false);
 
   const isImage = item.mimeType.startsWith('image/');
+  const isVideo = item.mimeType.startsWith('video/');
   const inlineUrl =
     item.originalUrl + (item.originalUrl.includes('?') ? '&' : '?') + 'inline=1';
 
+  // Files above this size stream straight to disk (verifying in-browser would
+  // load the whole file into memory and could crash a phone).
+  const VERIFY_LIMIT = 150 * 1024 * 1024; // 150 MB
+
   async function download() {
+    // Large files: efficient streamed download, no in-memory hashing.
+    if (item.size > VERIFY_LIMIT) {
+      const a = document.createElement('a');
+      a.href = item.originalUrl;
+      a.download = item.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setVerified(null);
+      setStatus('Downloading in full original quality (large file — stored checksum shown below).');
+      return;
+    }
+
     setBusy(true);
     setVerified(null);
     setStatus('Downloading original…');
@@ -89,6 +107,14 @@ export default function Viewer({
             src={inlineUrl}
             alt={item.name}
             className="max-h-full max-w-full rounded-lg object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : isVideo ? (
+          <video
+            src={inlineUrl}
+            controls
+            playsInline
+            className="max-h-full max-w-full rounded-lg"
             onClick={(e) => e.stopPropagation()}
           />
         ) : (

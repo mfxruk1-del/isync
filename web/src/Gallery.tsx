@@ -3,6 +3,7 @@ import { api, uploadFiles, formatBytes, type Share, type VaultFile } from './api
 import Viewer from './Viewer';
 import ShareManager from './ShareManager';
 import ShareLinkModal from './ShareLinkModal';
+import ShareCreateDialog, { type ShareOptions } from './ShareCreateDialog';
 
 export default function Gallery({ onLogout }: { onLogout: () => void }) {
   const [files, setFiles] = useState<VaultFile[]>([]);
@@ -15,7 +16,7 @@ export default function Gallery({ onLogout }: { onLogout: () => void }) {
   // Selection + sharing state
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [creating, setCreating] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
   const [newShare, setNewShare] = useState<Share | null>(null);
   const [showShares, setShowShares] = useState(false);
 
@@ -75,19 +76,11 @@ export default function Gallery({ onLogout }: { onLogout: () => void }) {
     else setActive(f);
   }
 
-  async function createLink() {
-    if (selected.size === 0) return;
-    setCreating(true);
-    setError('');
-    try {
-      const { share } = await api.createShare([...selected]);
-      setNewShare(share);
-      cancelSelecting();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setCreating(false);
-    }
+  async function doCreate(opts: ShareOptions) {
+    const { share } = await api.createShare([...selected], opts);
+    setNewShare(share);
+    setShowCreate(false);
+    cancelSelecting();
   }
 
   async function deleteActive() {
@@ -193,6 +186,13 @@ export default function Gallery({ onLogout }: { onLogout: () => void }) {
                     <span className="mt-1 line-clamp-2 break-all">{f.name}</span>
                   </div>
                 )}
+                {f.mimeType.startsWith('video/') && (
+                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white">
+                      ▶
+                    </span>
+                  </span>
+                )}
                 {selecting && (
                   <span
                     className={`absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs ${
@@ -221,7 +221,14 @@ export default function Gallery({ onLogout }: { onLogout: () => void }) {
           +
         </button>
       )}
-      <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={onPick} />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,video/*"
+        multiple
+        hidden
+        onChange={onPick}
+      />
 
       {/* Selection action bar */}
       {selecting && (
@@ -229,11 +236,11 @@ export default function Gallery({ onLogout }: { onLogout: () => void }) {
           <div className="mx-auto flex max-w-5xl items-center justify-between">
             <span className="text-sm text-slate-300">{selected.size} selected</span>
             <button
-              onClick={createLink}
-              disabled={selected.size === 0 || creating}
+              onClick={() => setShowCreate(true)}
+              disabled={selected.size === 0}
               className="rounded-lg bg-emerald-500 px-5 py-2.5 font-medium text-emerald-950 transition hover:bg-emerald-400 disabled:opacity-50"
             >
-              {creating ? 'Creating…' : 'Create share link'}
+              Create share link
             </button>
           </div>
         </div>
@@ -255,6 +262,13 @@ export default function Gallery({ onLogout }: { onLogout: () => void }) {
         />
       )}
 
+      {showCreate && (
+        <ShareCreateDialog
+          itemCount={selected.size}
+          onClose={() => setShowCreate(false)}
+          onCreate={doCreate}
+        />
+      )}
       {newShare && <ShareLinkModal share={newShare} onClose={() => setNewShare(null)} />}
       {showShares && <ShareManager onClose={() => setShowShares(false)} />}
     </div>
