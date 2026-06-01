@@ -34,6 +34,28 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_files_owner ON files(owner_id, created_at DESC);
+
+  -- A share = a link the owner created that exposes a chosen set of files.
+  CREATE TABLE IF NOT EXISTS shares (
+    id          TEXT PRIMARY KEY,
+    token       TEXT UNIQUE NOT NULL,   -- the unguessable part of the link
+    owner_id    TEXT NOT NULL,
+    title       TEXT,
+    expires_at  INTEGER,                -- NULL = never expires
+    created_at  INTEGER NOT NULL,
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  -- Which files belong to which share (only these are ever exposed by the link).
+  CREATE TABLE IF NOT EXISTS share_items (
+    share_id    TEXT NOT NULL,
+    file_id     TEXT NOT NULL,
+    PRIMARY KEY (share_id, file_id),
+    FOREIGN KEY (share_id) REFERENCES shares(id) ON DELETE CASCADE,
+    FOREIGN KEY (file_id)  REFERENCES files(id)  ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_shares_owner ON shares(owner_id, created_at DESC);
 `);
 
 // --- Types describing a row, for convenience ---
@@ -54,5 +76,14 @@ export interface FileRow {
   width: number | null;
   height: number | null;
   has_thumb: number;
+  created_at: number;
+}
+
+export interface ShareRow {
+  id: string;
+  token: string;
+  owner_id: string;
+  title: string | null;
+  expires_at: number | null;
   created_at: number;
 }

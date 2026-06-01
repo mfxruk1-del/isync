@@ -7,6 +7,8 @@ import { config } from './config';
 import { ensureOwner } from './auth';
 import authRoutes from './routes/auth';
 import fileRoutes from './routes/files';
+import shareRoutes from './routes/shares';
+import publicRoutes from './routes/public';
 
 const app = Fastify({
   logger: true,
@@ -29,6 +31,8 @@ async function main() {
   // API routes.
   await app.register(authRoutes);
   await app.register(fileRoutes);
+  await app.register(shareRoutes);
+  await app.register(publicRoutes); // public, token-based (no login)
 
   // Serve the built frontend (the PWA) as static files.
   await app.register(fastifyStatic, {

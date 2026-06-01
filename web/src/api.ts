@@ -17,6 +17,35 @@ export interface User {
   username: string;
 }
 
+export interface Share {
+  id: string;
+  token: string;
+  path: string; // e.g. /s/abc123
+  title: string | null;
+  expiresAt: number | null;
+  createdAt: number;
+  itemCount: number;
+}
+
+// A file as seen through a public share link (no internal fields).
+export interface SharedFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  sha256: string;
+  width: number | null;
+  height: number | null;
+  hasThumb: boolean;
+}
+
+export interface ShareContents {
+  title: string | null;
+  createdAt: number;
+  expiresAt: number | null;
+  files: SharedFile[];
+}
+
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
@@ -47,6 +76,15 @@ export const api = {
       'GET',
       `/api/files/${id}/verify`
     ),
+
+  // --- Shares (owner) ---
+  createShare: (fileIds: string[], opts?: { title?: string; expiresInDays?: number }) =>
+    request<{ share: Share }>('POST', '/api/shares', { fileIds, ...opts }),
+  listShares: () => request<{ shares: Share[] }>('GET', '/api/shares'),
+  revokeShare: (id: string) => request<void>('DELETE', `/api/shares/${id}`),
+
+  // --- Public share (no login) ---
+  getShare: (token: string) => request<ShareContents>('GET', `/api/s/${token}`),
 };
 
 // Upload with progress, using XHR (fetch can't report upload progress).

@@ -1,14 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, uploadFiles, formatBytes, type User, type VaultFile } from './api';
-import Lightbox from './Lightbox';
+import { api, uploadFiles, formatBytes, type Share, type VaultFile } from './api';
+import Viewer from './Viewer';
+import ShareManager from './ShareManager';
+import ShareLinkModal from './ShareLinkModal';
 
-export default function Gallery({ user, onLogout }: { user: User; onLogout: () => void }) {
+export default function Gallery({ onLogout }: { onLogout: () => void }) {
   const [files, setFiles] = useState<VaultFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [active, setActive] = useState<VaultFile | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Selection + sharing state
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [creating, setCreating] = useState(false);
+  const [newShare, setNewShare] = useState<Share | null>(null);
+  const [showShares, setShowShares] = useState(false);
 
   async function refresh() {
     const { files } = await api.list();
@@ -42,9 +51,56 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
     onLogout();
   }
 
-  async function onDeleted(id: string) {
-    setActive(null);
-    setFiles((prev) => prev.filter((f) => f.id !== id));
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function startSelecting(id: string) {
+    setSelecting(true);
+    setSelected(new Set([id]));
+  }
+
+  function cancelSelecting() {
+    setSelecting(false);
+    setSelected(new Set());
+  }
+
+  function onTileClick(f: VaultFile) {
+    if (selecting) toggleSelect(f.id);
+    else setActive(f);
+  }
+
+  async function createLink() {
+    if (selected.size === 0) return;
+    setCreating(true);
+    setError('');
+    try {
+      const { share } = await api.createShare([...selected]);
+      setNewShare(share);
+      cancelSelecting();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function deleteActive() {
+    if (!active) return;
+    if (!confirm(`Delete "${active.name}"? This cannot be undone.`)) return;
+    const id = active.id;
+    try {
+      await api.remove(id);
+      setActive(null);
+      setFiles((prev) => prev.filter((f) => f.id !== id));
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   return (
@@ -55,8 +111,13 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
           <span className="text-2xl">🔒</span>
           <h1 className="text-xl font-semibold">Vault</h1>
         </div>
-        <div className="flex items-center gap-3 text-sm text-slate-400">
-          <span className="hidden sm:inline">{user.username}</span>
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <button
+            onClick={() => setShowShares(true)}
+            className="rounded-lg border border-white/10 px-3 py-1.5 hover:bg-white/5"
+          >
+            Links
+          </button>
           <button onClick={logout} className="rounded-lg border border-white/10 px-3 py-1.5 hover:bg-white/5">
             Sign out
           </button>
@@ -69,13 +130,28 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
         </div>
       )}
 
-      {/* Upload progress */}
       {uploadPct !== null && (
         <div className="mb-4">
           <div className="mb-1 text-sm text-slate-400">Uploading… {uploadPct}%</div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
             <div className="h-full bg-emerald-500 transition-all" style={{ width: `${uploadPct}%` }} />
           </div>
+        </div>
+      )}
+
+      {/* Toolbar */}
+      {files.length > 0 && (
+        <div className="mb-3 flex items-center justify-between text-sm">
+          <span className="text-slate-400">{files.length} item(s)</span>
+          {selecting ? (
+            <button onClick={cancelSelecting} className="text-slate-300 hover:underline">
+              Cancel
+            </button>
+          ) : (
+            <button onClick={() => setSelecting(true)} className="text-emerald-400 hover:underline">
+              Select to share
+            </button>
+          )}
         </div>
       )}
 
@@ -89,52 +165,98 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-          {files.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setActive(f)}
-              className="group relative aspect-square overflow-hidden rounded-lg bg-white/5"
-              title={f.name}
-            >
-              {f.hasThumb ? (
-                <img
-                  src={`/api/files/${f.id}/thumb`}
-                  alt={f.name}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition group-hover:scale-105"
-                />
-              ) : (
-                <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center text-xs text-slate-400">
-                  <span className="text-2xl">📄</span>
-                  <span className="mt-1 line-clamp-2 break-all">{f.name}</span>
-                </div>
-              )}
-              <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-slate-200">
-                {formatBytes(f.size)}
-              </span>
-            </button>
-          ))}
+          {files.map((f) => {
+            const isSel = selected.has(f.id);
+            return (
+              <button
+                key={f.id}
+                onClick={() => onTileClick(f)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  startSelecting(f.id);
+                }}
+                className={`group relative aspect-square overflow-hidden rounded-lg bg-white/5 ${
+                  isSel ? 'ring-2 ring-emerald-400' : ''
+                }`}
+                title={f.name}
+              >
+                {f.hasThumb ? (
+                  <img
+                    src={`/api/files/${f.id}/thumb`}
+                    alt={f.name}
+                    loading="lazy"
+                    className="h-full w-full object-cover transition group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center text-xs text-slate-400">
+                    <span className="text-2xl">📄</span>
+                    <span className="mt-1 line-clamp-2 break-all">{f.name}</span>
+                  </div>
+                )}
+                {selecting && (
+                  <span
+                    className={`absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs ${
+                      isSel ? 'bg-emerald-500 text-emerald-950' : 'bg-black/50 text-white'
+                    }`}
+                  >
+                    {isSel ? '✓' : ''}
+                  </span>
+                )}
+                <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-slate-200">
+                  {formatBytes(f.size)}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Floating upload button */}
-      <button
-        onClick={() => inputRef.current?.click()}
-        className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-3xl text-emerald-950 shadow-lg transition hover:bg-emerald-400"
-        aria-label="Upload"
-      >
-        +
-      </button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        hidden
-        onChange={onPick}
-      />
+      {/* Floating upload button (hidden while selecting) */}
+      {!selecting && (
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-3xl text-emerald-950 shadow-lg transition hover:bg-emerald-400"
+          aria-label="Upload"
+        >
+          +
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={onPick} />
 
-      {active && <Lightbox file={active} onClose={() => setActive(null)} onDeleted={onDeleted} />}
+      {/* Selection action bar */}
+      {selecting && (
+        <div className="fixed inset-x-0 bottom-0 border-t border-white/10 bg-ink/95 p-4 backdrop-blur">
+          <div className="mx-auto flex max-w-5xl items-center justify-between">
+            <span className="text-sm text-slate-300">{selected.size} selected</span>
+            <button
+              onClick={createLink}
+              disabled={selected.size === 0 || creating}
+              className="rounded-lg bg-emerald-500 px-5 py-2.5 font-medium text-emerald-950 transition hover:bg-emerald-400 disabled:opacity-50"
+            >
+              {creating ? 'Creating…' : 'Create share link'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {active && (
+        <Viewer
+          item={{
+            name: active.name,
+            mimeType: active.mimeType,
+            size: active.size,
+            width: active.width,
+            height: active.height,
+            sha256: active.sha256,
+            originalUrl: `/api/files/${active.id}/original`,
+          }}
+          onClose={() => setActive(null)}
+          onDelete={deleteActive}
+        />
+      )}
+
+      {newShare && <ShareLinkModal share={newShare} onClose={() => setNewShare(null)} />}
+      {showShares && <ShareManager onClose={() => setShowShares(false)} />}
     </div>
   );
 }

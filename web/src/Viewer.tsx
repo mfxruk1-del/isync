@@ -1,35 +1,50 @@
 import { useState } from 'react';
-import { api, sha256OfBlob, formatBytes, type VaultFile } from './api';
+import { sha256OfBlob, formatBytes } from './api';
 
-export default function Lightbox({
-  file,
+// A generic full-screen viewer used for both owned files and shared files.
+// It previews the item, and downloads the ORIGINAL while proving (in the
+// browser) that the bytes are identical to what was stored.
+export interface ViewerItem {
+  name: string;
+  mimeType: string;
+  size: number;
+  width: number | null;
+  height: number | null;
+  sha256: string;
+  // Base URL for the original file. We append ?inline=1 for preview.
+  originalUrl: string;
+}
+
+export default function Viewer({
+  item,
   onClose,
-  onDeleted,
+  onDelete,
 }: {
-  file: VaultFile;
+  item: ViewerItem;
   onClose: () => void;
-  onDeleted: (id: string) => void;
+  onDelete?: () => void;
 }) {
   const [status, setStatus] = useState('');
   const [verified, setVerified] = useState<null | boolean>(null);
   const [busy, setBusy] = useState(false);
 
-  const isImage = file.mimeType.startsWith('image/');
+  const isImage = item.mimeType.startsWith('image/');
+  const inlineUrl =
+    item.originalUrl + (item.originalUrl.includes('?') ? '&' : '?') + 'inline=1';
 
-  // Download the original AND prove in the browser that it's byte-identical.
   async function download() {
     setBusy(true);
-    setStatus('Downloading original…');
     setVerified(null);
+    setStatus('Downloading original…');
     try {
-      const res = await fetch(`/api/files/${file.id}/original`, { credentials: 'include' });
+      const res = await fetch(item.originalUrl, { credentials: 'include' });
       if (!res.ok) throw new Error('Download failed');
       const serverHash = res.headers.get('X-Checksum-SHA256');
       const blob = await res.blob();
 
       setStatus('Verifying…');
       const localHash = await sha256OfBlob(blob);
-      const identical = localHash === file.sha256 && localHash === serverHash;
+      const identical = localHash === item.sha256 && localHash === serverHash;
       setVerified(identical);
       setStatus(
         identical
@@ -37,11 +52,10 @@ export default function Lightbox({
           : '⚠️ Checksum mismatch! The file changed in transit.'
       );
 
-      // Trigger the actual save to the device.
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = file.name;
+      a.download = item.name;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -54,30 +68,14 @@ export default function Lightbox({
     }
   }
 
-  async function remove() {
-    if (!confirm(`Delete "${file.name}"? This cannot be undone.`)) return;
-    setBusy(true);
-    try {
-      await api.remove(file.id);
-      onDeleted(file.id);
-    } catch (err) {
-      setStatus((err as Error).message);
-      setBusy(false);
-    }
-  }
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      {/* Top bar */}
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-sm" onClick={onClose}>
       <div className="flex items-center justify-between p-4" onClick={(e) => e.stopPropagation()}>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{file.name}</p>
+          <p className="truncate text-sm font-medium">{item.name}</p>
           <p className="text-xs text-slate-400">
-            {formatBytes(file.size)}
-            {file.width && file.height ? ` · ${file.width}×${file.height}` : ''}
+            {formatBytes(item.size)}
+            {item.width && item.height ? ` · ${item.width}×${item.height}` : ''}
           </p>
         </div>
         <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-slate-300 hover:bg-white/10">
@@ -85,24 +83,22 @@ export default function Lightbox({
         </button>
       </div>
 
-      {/* Preview */}
       <div className="flex flex-1 items-center justify-center overflow-hidden p-4" onClick={onClose}>
         {isImage ? (
           <img
-            src={`/api/files/${file.id}/original?inline=1`}
-            alt={file.name}
+            src={inlineUrl}
+            alt={item.name}
             className="max-h-full max-w-full rounded-lg object-contain"
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
           <div className="text-center text-slate-300" onClick={(e) => e.stopPropagation()}>
             <div className="text-6xl">📄</div>
-            <p className="mt-2">{file.name}</p>
+            <p className="mt-2">{item.name}</p>
           </div>
         )}
       </div>
 
-      {/* Bottom controls */}
       <div className="space-y-3 p-4" onClick={(e) => e.stopPropagation()}>
         {status && (
           <p
@@ -117,7 +113,6 @@ export default function Lightbox({
             {status}
           </p>
         )}
-
         <div className="flex items-center justify-center gap-3">
           <button
             onClick={download}
@@ -126,18 +121,17 @@ export default function Lightbox({
           >
             Download (lossless)
           </button>
-          <button
-            onClick={remove}
-            disabled={busy}
-            className="rounded-lg border border-rose-500/40 px-4 py-2.5 text-rose-300 transition hover:bg-rose-500/10 disabled:opacity-50"
-          >
-            Delete
-          </button>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              disabled={busy}
+              className="rounded-lg border border-rose-500/40 px-4 py-2.5 text-rose-300 transition hover:bg-rose-500/10 disabled:opacity-50"
+            >
+              Delete
+            </button>
+          )}
         </div>
-
-        <p className="break-all text-center text-[11px] text-slate-500">
-          SHA-256: {file.sha256}
-        </p>
+        <p className="break-all text-center text-[11px] text-slate-500">SHA-256: {item.sha256}</p>
       </div>
     </div>
   );
