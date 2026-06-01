@@ -1,6 +1,7 @@
 # Caddy configuration.
-# Caddy automatically gets and renews a FREE HTTPS certificate for your domain.
-# The {$DOMAIN} and {$ACME_EMAIL} values are read from your .env file.
+# Caddy automatically gets and renews a FREE HTTPS certificate for your domain,
+# then forwards all traffic to the Vault app container.
+# {$DOMAIN} and {$ACME_EMAIL} are read from your .env file.
 
 {
 	# Email used when requesting the free TLS certificate.
@@ -8,27 +9,25 @@
 }
 
 {$DOMAIN} {
-	# Serve the static placeholder site (Phase 0).
-	# In Phase 1 this will point at the built PWA instead.
-	root * /srv
-	file_server
-
 	# Compress responses for faster loading.
 	encode gzip zstd
 
+	# Allow large uploads (big photos now, big videos later).
+	request_body {
+		max_size 5GB
+	}
+
+	# Send everything to the app container (API + the PWA).
+	reverse_proxy app:3000
+
 	# Basic security headers.
 	header {
-		# Tell browsers to always use HTTPS for this site.
 		Strict-Transport-Security "max-age=31536000;"
-		# Don't let the page be embedded in other sites (clickjacking protection).
-		X-Frame-Options "SAMEORIGIN"
-		# Don't leak the referrer to other sites.
+		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		# Remove the default server banner.
 		-Server
 	}
 
-	# Log requests (handy while we're setting things up).
 	log {
 		output stdout
 		format console

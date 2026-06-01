@@ -1,25 +1,42 @@
-# Docker Compose runs your whole app with one command.
-# Phase 0: just Caddy, serving a placeholder page over automatic HTTPS.
-# Later phases will add the API and the PWA frontend as more services here.
+# Runs the whole app with one command: `docker compose up -d --build`
+#
+#   app   = the Vault application (API + the installable PWA)
+#   caddy = HTTPS + routes your domain to the app
+#
+# Your real data lives in ./data on the VPS (easy to back up).
 
 services:
+  app:
+    build: .
+    container_name: vault-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATA_DIR=/data
+    volumes:
+      # Your originals, thumbnails, and the metadata database persist here.
+      - ./data:/data
+    expose:
+      - "3000"
+
   caddy:
     image: caddy:2-alpine
     container_name: vault-caddy
     restart: unless-stopped
     ports:
-      - "80:80"     # HTTP  (Caddy auto-redirects this to HTTPS)
-      - "443:443"   # HTTPS
+      - "80:80"
+      - "443:443"
     env_file:
       - .env
     volumes:
-      # Our Caddy config (read-only).
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      # The static site Caddy serves (read-only). Phase 0 = the placeholder.
-      - ./placeholder:/srv:ro
-      # Persisted certificates + Caddy state, so HTTPS survives restarts.
       - caddy_data:/data
       - caddy_config:/config
+    depends_on:
+      - app
 
 volumes:
   caddy_data:

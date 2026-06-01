@@ -17,6 +17,9 @@ build/
 *.log
 npm-debug.log*
 
+# --- Temp / scratch ---
+.icontmp/
+
 # --- OS / editor junk ---
 .DS_Store
 Thumbs.db
