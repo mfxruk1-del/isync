@@ -147,6 +147,7 @@ export default function ShareView() {
             height: active.height,
             sha256: active.sha256,
             originalUrl: `/api/s/${token}/items/${active.id}/original`,
+            thumbUrl: `/api/s/${token}/items/${active.id}/thumb`,
           }}
           onClose={() => setActive(null)}
         />

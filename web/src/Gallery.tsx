@@ -24,7 +24,9 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [active, setActive] = useState<VaultFile | null>(null);
+  const [showUploadMenu, setShowUploadMenu] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   // Selection + sharing state
   const [selecting, setSelecting] = useState(false);
@@ -88,6 +90,14 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
     return () => clearInterval(t);
   }, [pollStatus]);
 
+  // Arrived via Android "Share to Vault"? Pick up the shared files and upload.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('share-target')) {
+      importShared();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function startUpload(picked: File[]) {
     if (picked.length === 0) return;
     if (picked.length > MAX_BATCH) {
@@ -122,6 +132,31 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
       (f) => f.type.startsWith('image/') || f.type.startsWith('video/')
     );
     startUpload(dropped);
+  }
+
+  // Read files the service worker stashed from an Android share, then upload.
+  async function importShared() {
+    window.history.replaceState({}, '', '/'); // clean the URL
+    try {
+      const cache = await caches.open('vault-shared');
+      const idxRes = await cache.match('/__shared__/index');
+      if (!idxRes) return;
+      const ids: string[] = await idxRes.json();
+      const files: File[] = [];
+      for (const id of ids) {
+        const r = await cache.match(`/__shared__/${id}`);
+        if (r) {
+          const blob = await r.blob();
+          const name = decodeURIComponent(r.headers.get('x-filename') || `shared-${id}`);
+          files.push(new File([blob], name, { type: blob.type }));
+        }
+        await cache.delete(`/__shared__/${id}`);
+      }
+      await cache.delete('/__shared__/index');
+      if (files.length) startUpload(files);
+    } catch {
+      /* ignore */
+    }
   }
 
   async function logout() {
@@ -372,21 +407,46 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
         </div>
       )}
 
-      {/* Floating upload button (hidden while selecting) */}
+      {/* Floating upload button + menu (hidden while selecting) */}
       {!selecting && (
-        <button
-          onClick={() => inputRef.current?.click()}
-          className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-3xl text-emerald-950 shadow-lg transition hover:bg-emerald-400"
-          aria-label="Upload"
-        >
-          +
-        </button>
+        <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-2">
+          {showUploadMenu && (
+            <div className="flex flex-col items-end gap-2">
+              <button
+                onClick={() => {
+                  setShowUploadMenu(false);
+                  inputRef.current?.click();
+                }}
+                className="rounded-full border border-white/10 bg-panel px-4 py-2 text-sm shadow-lg hover:bg-white/5"
+              >
+                🖼️ Photos &amp; videos
+              </button>
+              <button
+                onClick={() => {
+                  setShowUploadMenu(false);
+                  cameraRef.current?.click();
+                }}
+                className="rounded-full border border-white/10 bg-panel px-4 py-2 text-sm shadow-lg hover:bg-white/5"
+              >
+                📷 Take photo/video
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => setShowUploadMenu((v) => !v)}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-3xl text-emerald-950 shadow-lg transition hover:bg-emerald-400"
+            aria-label="Add"
+          >
+            {showUploadMenu ? '×' : '+'}
+          </button>
+        </div>
       )}
+      <input ref={inputRef} type="file" accept="image/*,video/*" multiple hidden onChange={onPick} />
       <input
-        ref={inputRef}
+        ref={cameraRef}
         type="file"
         accept="image/*,video/*"
-        multiple
+        capture="environment"
         hidden
         onChange={onPick}
       />
@@ -417,6 +477,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
             height: active.height,
             sha256: active.sha256,
             originalUrl: `/api/files/${active.id}/original`,
+            thumbUrl: `/api/files/${active.id}/thumb`,
           }}
           onClose={() => setActive(null)}
           onDelete={deleteActive}

@@ -4,15 +4,28 @@
 // touch that file again. Thumbnails are SEPARATE, smaller copies — the
 // original is never re-encoded. A SHA-256 checksum lets us prove it.
 import { createWriteStream, createReadStream } from 'node:fs';
-import { stat, rm } from 'node:fs/promises';
+import { stat, rm, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
 import { Transform, type Readable } from 'node:stream';
 import path from 'node:path';
 import { nanoid } from 'nanoid';
 import sharp from 'sharp';
+import heicConvert from 'heic-convert';
 import { paths } from './config';
 import { extractVideoFrame } from './video';
+
+const THUMB_SIZE = 1024; // big enough to double as a preview for HEIC photos
+
+// Read an image into a sharp-friendly buffer, decoding HEIC (iPhone) first
+// since sharp's prebuilt binaries can't always read HEIC directly.
+async function loadImageBuffer(path: string, mimeType: string): Promise<Buffer> {
+  const raw = await readFile(path);
+  if (/heic|heif/i.test(mimeType)) {
+    return heicConvert({ buffer: raw, format: 'JPEG', quality: 0.92 });
+  }
+  return raw;
+}
 
 export function originalPath(id: string) {
   return path.join(paths.originals, id);
@@ -68,12 +81,13 @@ export async function generateThumbnail(
   let hasThumb = false;
   try {
     if (mimeType.startsWith('image/')) {
-      const meta = await sharp(dest).metadata();
+      const buffer = await loadImageBuffer(dest, mimeType);
+      const meta = await sharp(buffer).metadata();
       width = meta.width ?? null;
       height = meta.height ?? null;
-      await sharp(dest)
+      await sharp(buffer)
         .rotate() // auto-orient using EXIF (thumbnail only)
-        .resize(640, 640, { fit: 'inside', withoutEnlargement: true })
+        .resize(THUMB_SIZE, THUMB_SIZE, { fit: 'inside', withoutEnlargement: true })
         .webp({ quality: 82 })
         .toFile(thumbPath(id));
       hasThumb = true;
@@ -84,7 +98,7 @@ export async function generateThumbnail(
         width = meta.width ?? null;
         height = meta.height ?? null;
         await sharp(frame)
-          .resize(640, 640, { fit: 'inside', withoutEnlargement: true })
+          .resize(THUMB_SIZE, THUMB_SIZE, { fit: 'inside', withoutEnlargement: true })
           .webp({ quality: 82 })
           .toFile(thumbPath(id));
         hasThumb = true;

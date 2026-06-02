@@ -13,6 +13,8 @@ export interface ViewerItem {
   sha256: string;
   // Base URL for the original file. We append ?inline=1 for preview.
   originalUrl: string;
+  // Thumbnail URL — used to preview formats browsers can't render (e.g. HEIC).
+  thumbUrl?: string;
 }
 
 export default function Viewer({
@@ -32,6 +34,9 @@ export default function Viewer({
   const isVideo = item.mimeType.startsWith('video/');
   const inlineUrl =
     item.originalUrl + (item.originalUrl.includes('?') ? '&' : '?') + 'inline=1';
+  // HEIC can't render in most browsers — preview via the thumbnail instead.
+  const isHeic = /heic|heif/i.test(item.mimeType);
+  const previewSrc = isImage && isHeic && item.thumbUrl ? item.thumbUrl : inlineUrl;
 
   // Files above this size stream straight to disk (verifying in-browser would
   // load the whole file into memory and could crash a phone).
@@ -104,7 +109,7 @@ export default function Viewer({
       <div className="flex flex-1 items-center justify-center overflow-hidden p-4" onClick={onClose}>
         {isImage ? (
           <img
-            src={inlineUrl}
+            src={previewSrc}
             alt={item.name}
             className="max-h-full max-w-full rounded-lg object-contain"
             onClick={(e) => e.stopPropagation()}
