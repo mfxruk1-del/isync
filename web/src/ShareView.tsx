@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
-import { api, formatBytes, type ShareResponse, type SharedFile } from './api';
-import Viewer from './Viewer';
+import { api, formatBytes, type ShareResponse } from './api';
+import Viewer, { type ViewerItem } from './Viewer';
 import InstallPrompt from './InstallPrompt';
 
 export default function ShareView() {
@@ -9,7 +9,7 @@ export default function ShareView() {
   const [resp, setResp] = useState<ShareResponse | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [active, setActive] = useState<SharedFile | null>(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   // Password prompt state
   const [password, setPassword] = useState('');
@@ -89,6 +89,19 @@ export default function ShareView() {
     );
   }
 
+  const items: ViewerItem[] = resp.files.map((f) => ({
+    id: f.id,
+    name: f.name,
+    mimeType: f.mimeType,
+    size: f.size,
+    width: f.width,
+    height: f.height,
+    sha256: f.sha256,
+    originalUrl: `/api/s/${token}/items/${f.id}/original`,
+    thumbUrl: `/api/s/${token}/items/${f.id}/thumb`,
+    hasThumb: f.hasThumb,
+  }));
+
   return (
     <div className="mx-auto min-h-full max-w-5xl px-4 pb-16 pt-6">
       <InstallPrompt />
@@ -103,10 +116,10 @@ export default function ShareView() {
       </header>
 
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-        {resp.files.map((f) => (
+        {resp.files.map((f, i) => (
           <button
             key={f.id}
-            onClick={() => setActive(f)}
+            onClick={() => setActiveIndex(i)}
             className="group relative aspect-square overflow-hidden rounded-lg bg-white/5"
             title={f.name}
           >
@@ -137,19 +150,12 @@ export default function ShareView() {
         ))}
       </div>
 
-      {active && (
+      {activeIndex !== null && (
         <Viewer
-          item={{
-            name: active.name,
-            mimeType: active.mimeType,
-            size: active.size,
-            width: active.width,
-            height: active.height,
-            sha256: active.sha256,
-            originalUrl: `/api/s/${token}/items/${active.id}/original`,
-            thumbUrl: `/api/s/${token}/items/${active.id}/thumb`,
-          }}
-          onClose={() => setActive(null)}
+          items={items}
+          index={activeIndex}
+          onIndex={setActiveIndex}
+          onClose={() => setActiveIndex(null)}
         />
       )}
     </div>

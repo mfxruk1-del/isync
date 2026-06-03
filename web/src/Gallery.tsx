@@ -9,7 +9,7 @@ import {
   type User,
   type VaultFile,
 } from './api';
-import Viewer from './Viewer';
+import Viewer, { type ViewerItem } from './Viewer';
 import ShareManager from './ShareManager';
 import ShareLinkModal from './ShareLinkModal';
 import ShareCreateDialog, { type ShareOptions } from './ShareCreateDialog';
@@ -23,7 +23,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [active, setActive] = useState<VaultFile | null>(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [showUploadMenu, setShowUploadMenu] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -183,9 +183,9 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
     setSelected(new Set());
   }
 
-  function onTileClick(f: VaultFile) {
+  function onTileClick(f: VaultFile, i: number) {
     if (selecting) toggleSelect(f.id);
-    else setActive(f);
+    else setActiveIndex(i);
   }
 
   async function doCreate(opts: ShareOptions) {
@@ -195,14 +195,22 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
     cancelSelecting();
   }
 
-  async function deleteActive() {
-    if (!active) return;
-    if (!confirm(`Delete "${active.name}"? This cannot be undone.`)) return;
-    const id = active.id;
+  async function deleteCurrent() {
+    if (activeIndex === null) return;
+    const f = displayed[activeIndex];
+    if (!f) return;
+    if (!confirm(`Delete "${f.name}"? This cannot be undone.`)) return;
     try {
-      await api.remove(id);
-      setActive(null);
-      setFiles((prev) => prev.filter((f) => f.id !== id));
+      await api.remove(f.id);
+      const wasSearch = results !== null;
+      const newList = (wasSearch ? results! : files).filter((x) => x.id !== f.id);
+      if (wasSearch) {
+        setResults(newList);
+        setFiles((prev) => prev.filter((x) => x.id !== f.id));
+      } else {
+        setFiles(newList);
+      }
+      setActiveIndex(newList.length === 0 ? null : Math.min(activeIndex, newList.length - 1));
     } catch (err) {
       setError((err as Error).message);
     }
@@ -210,6 +218,18 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
 
   const isSearch = results !== null;
   const displayed = results ?? files;
+  const viewerItems: ViewerItem[] = displayed.map((f) => ({
+    id: f.id,
+    name: f.name,
+    mimeType: f.mimeType,
+    size: f.size,
+    width: f.width,
+    height: f.height,
+    sha256: f.sha256,
+    originalUrl: `/api/files/${f.id}/original`,
+    thumbUrl: `/api/files/${f.id}/thumb`,
+    hasThumb: f.hasThumb,
+  }));
 
   return (
     <div
@@ -354,12 +374,12 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-          {displayed.map((f) => {
+          {displayed.map((f, i) => {
             const isSel = selected.has(f.id);
             return (
               <button
                 key={f.id}
-                onClick={() => onTileClick(f)}
+                onClick={() => onTileClick(f, i)}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   startSelecting(f.id);
@@ -467,20 +487,13 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
         </div>
       )}
 
-      {active && (
+      {activeIndex !== null && (
         <Viewer
-          item={{
-            name: active.name,
-            mimeType: active.mimeType,
-            size: active.size,
-            width: active.width,
-            height: active.height,
-            sha256: active.sha256,
-            originalUrl: `/api/files/${active.id}/original`,
-            thumbUrl: `/api/files/${active.id}/thumb`,
-          }}
-          onClose={() => setActive(null)}
-          onDelete={deleteActive}
+          items={viewerItems}
+          index={activeIndex}
+          onIndex={setActiveIndex}
+          onClose={() => setActiveIndex(null)}
+          onDelete={deleteCurrent}
         />
       )}
 
