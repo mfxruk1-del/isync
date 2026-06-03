@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { sha256OfBlob, formatBytes } from './api';
+import { useBackToClose } from './useBackToClose';
 
 // A generic full-screen viewer used for both owned files and shared files.
 // It previews the item, and downloads the ORIGINAL while proving (in the
@@ -29,6 +30,9 @@ export default function Viewer({
   const [status, setStatus] = useState('');
   const [verified, setVerified] = useState<null | boolean>(null);
   const [busy, setBusy] = useState(false);
+
+  // Android Back button closes the viewer instead of leaving the app.
+  useBackToClose(onClose);
 
   const isImage = item.mimeType.startsWith('image/');
   const isVideo = item.mimeType.startsWith('video/');

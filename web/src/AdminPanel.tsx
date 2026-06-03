@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type Invite, type Member } from './api';
+import { useBackToClose } from './useBackToClose';
 
 function formatDate(ms: number) {
   return new Date(ms).toLocaleDateString(undefined, {
@@ -10,6 +11,7 @@ function formatDate(ms: number) {
 }
 
 export default function AdminPanel({ onClose }: { onClose: () => void }) {
+  useBackToClose(onClose);
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);

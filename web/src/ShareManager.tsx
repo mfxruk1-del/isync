@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type Share } from './api';
+import { useBackToClose } from './useBackToClose';
 
 function formatDate(ms: number) {
   return new Date(ms).toLocaleDateString(undefined, {
@@ -10,6 +11,7 @@ function formatDate(ms: number) {
 }
 
 export default function ShareManager({ onClose }: { onClose: () => void }) {
+  useBackToClose(onClose);
   const [shares, setShares] = useState<Share[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
