@@ -19,6 +19,7 @@ npm-debug.log*
 
 # --- Temp / scratch ---
 .icontmp/
+.claude/launch.json
 
 # --- OS / editor junk ---
 .DS_Store

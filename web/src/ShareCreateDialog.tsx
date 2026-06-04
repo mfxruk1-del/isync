@@ -37,7 +37,7 @@ export default function ShareCreateDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6" onClick={onClose}>
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-panel p-6"
+        className="w-full max-w-md animate-pop rounded-2xl border border-white/10 bg-panel p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold">Create a share link</h2>

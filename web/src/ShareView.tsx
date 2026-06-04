@@ -64,7 +64,7 @@ export default function ShareView() {
   if (resp.locked) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <form onSubmit={unlock} className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+        <form onSubmit={unlock} className="panel w-full max-w-sm animate-pop p-8 text-center">
           <div className="text-4xl">🔐</div>
           <h1 className="mt-2 text-xl font-semibold">Password required</h1>
           <p className="mt-1 text-sm text-slate-400">This link is password-protected.</p>
@@ -73,14 +73,14 @@ export default function ShareView() {
             autoFocus
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-5 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-emerald-400/60"
+            className="field mt-5"
             placeholder="Enter password"
           />
           {unlockError && <p className="mt-3 text-sm text-rose-400">{unlockError}</p>}
           <button
             type="submit"
             disabled={unlocking}
-            className="mt-4 w-full rounded-lg bg-emerald-500 py-2 font-medium text-emerald-950 hover:bg-emerald-400 disabled:opacity-50"
+            className="btn-primary mt-4 w-full"
           >
             {unlocking ? 'Unlocking…' : 'Unlock'}
           </button>
@@ -103,7 +103,7 @@ export default function ShareView() {
   }));
 
   return (
-    <div className="mx-auto min-h-full max-w-5xl px-4 pb-16 pt-6">
+    <div className="mx-auto min-h-full max-w-5xl animate-fade px-4 pb-16 pt-6">
       <InstallPrompt />
       <header className="mb-6 text-center">
         <div className="flex items-center justify-center gap-2">
@@ -120,7 +120,7 @@ export default function ShareView() {
           <button
             key={f.id}
             onClick={() => setActiveIndex(i)}
-            className="group relative aspect-square overflow-hidden rounded-lg bg-white/5"
+            className="group relative aspect-square overflow-hidden rounded-xl bg-white/5 ring-1 ring-white/5 transition hover:ring-white/20"
             title={f.name}
           >
             {f.hasThumb ? (

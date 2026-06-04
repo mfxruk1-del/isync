@@ -233,7 +233,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
 
   return (
     <div
-      className="relative mx-auto min-h-full max-w-5xl px-4 pb-24 pt-4"
+      className="relative mx-auto min-h-full max-w-5xl px-4 pb-24"
       onDragOver={(e) => {
         e.preventDefault();
         if (!selecting) setDragging(true);
@@ -254,27 +254,21 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
         </div>
       )}
       {/* Header */}
-      <header className="mb-6 flex items-center justify-between">
+      <header className="sticky top-0 z-20 -mx-4 mb-4 flex items-center justify-between border-b border-white/5 bg-ink/70 px-4 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🔒</span>
-          <h1 className="text-xl font-semibold">Vault</h1>
+          <h1 className="text-lg font-semibold tracking-tight">Vault</h1>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-400">
+        <div className="flex items-center gap-2">
           {user.isAdmin && (
-            <button
-              onClick={() => setShowAdmin(true)}
-              className="rounded-lg border border-white/10 px-3 py-1.5 hover:bg-white/5"
-            >
+            <button onClick={() => setShowAdmin(true)} className="chip">
               People
             </button>
           )}
-          <button
-            onClick={() => setShowShares(true)}
-            className="rounded-lg border border-white/10 px-3 py-1.5 hover:bg-white/5"
-          >
+          <button onClick={() => setShowShares(true)} className="chip">
             Links
           </button>
-          <button onClick={logout} className="rounded-lg border border-white/10 px-3 py-1.5 hover:bg-white/5">
+          <button onClick={logout} className="chip">
             Sign out
           </button>
         </div>
@@ -292,7 +286,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search your photos & videos (e.g. cat, beach, a name…)"
-            className="w-full rounded-xl border border-white/10 bg-black/30 py-2.5 pl-10 pr-9 text-sm outline-none focus:border-emerald-400/60"
+            className="field pl-10 pr-9"
           />
           {query && (
             <button
@@ -368,8 +362,11 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
           <p className="mt-1 text-sm">Try a different word, or wait for indexing to finish.</p>
         </div>
       ) : !isSearch && files.length === 0 ? (
-        <div className="mt-16 text-center text-slate-400">
-          <p className="text-lg">No photos yet</p>
+        <div className="mt-20 text-center text-slate-400">
+          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 text-3xl">
+            🖼️
+          </div>
+          <p className="text-lg font-medium text-slate-200">No photos yet</p>
           <p className="mt-1 text-sm">Tap the + button to upload your first lossless image.</p>
         </div>
       ) : (
@@ -384,8 +381,8 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
                   e.preventDefault();
                   startSelecting(f.id);
                 }}
-                className={`group relative aspect-square overflow-hidden rounded-lg bg-white/5 ${
-                  isSel ? 'ring-2 ring-emerald-400' : ''
+                className={`group relative aspect-square overflow-hidden rounded-xl bg-white/5 ring-1 transition ${
+                  isSel ? 'ring-2 ring-emerald-400' : 'ring-white/5 hover:ring-white/20'
                 }`}
                 title={f.name}
               >
@@ -454,7 +451,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
           )}
           <button
             onClick={() => setShowUploadMenu((v) => !v)}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-3xl text-emerald-950 shadow-lg transition hover:bg-emerald-400"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-3xl text-emerald-950 shadow-glow transition hover:from-emerald-300 hover:to-emerald-500 active:scale-95"
             aria-label="Add"
           >
             {showUploadMenu ? '×' : '+'}

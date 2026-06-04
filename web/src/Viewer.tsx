@@ -144,7 +144,7 @@ export default function Viewer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex animate-fade flex-col bg-black/95 backdrop-blur-sm" onClick={onClose}>
       {/* Top bar */}
       <div className="flex items-center justify-between p-4" onClick={(e) => e.stopPropagation()}>
         <div className="min-w-0">

@@ -23,19 +23,18 @@ export default function Login({ onAuthed }: { onAuthed: (u: User) => void }) {
 
   return (
     <div className="flex h-full items-center justify-center p-6">
-      <form
-        onSubmit={submit}
-        className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur"
-      >
+      <form onSubmit={submit} className="panel w-full max-w-sm animate-pop p-8">
         <div className="mb-6 text-center">
-          <div className="text-4xl">🔒</div>
-          <h1 className="mt-2 text-2xl font-semibold">Vault</h1>
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-3xl ring-1 ring-emerald-400/30">
+            🔒
+          </div>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight">Vault</h1>
           <p className="mt-1 text-sm text-slate-400">Your private, lossless media vault</p>
         </div>
 
         <label className="mb-1 block text-sm text-slate-300">Username</label>
         <input
-          className="mb-4 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-emerald-400/60"
+          className="field mb-4"
           value={username}
           autoCapitalize="none"
           autoComplete="username"
@@ -44,7 +43,7 @@ export default function Login({ onAuthed }: { onAuthed: (u: User) => void }) {
 
         <label className="mb-1 block text-sm text-slate-300">Password</label>
         <input
-          className="mb-4 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-emerald-400/60"
+          className="field mb-4"
           type="password"
           value={password}
           autoComplete="current-password"
@@ -53,11 +52,7 @@ export default function Login({ onAuthed }: { onAuthed: (u: User) => void }) {
 
         {error && <p className="mb-4 text-sm text-rose-400">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full rounded-lg bg-emerald-500 py-2 font-medium text-emerald-950 transition hover:bg-emerald-400 disabled:opacity-50"
-        >
+        <button type="submit" disabled={busy} className="btn-primary w-full">
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>

@@ -52,7 +52,7 @@ export default function ShareManager({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
       <div
-        className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-2xl border border-white/10 bg-panel"
+        className="flex max-h-[80vh] w-full max-w-lg animate-pop flex-col rounded-2xl border border-white/10 bg-panel shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-white/10 p-4">
