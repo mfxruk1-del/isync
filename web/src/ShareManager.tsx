@@ -52,12 +52,12 @@ export default function ShareManager({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
       <div
-        className="flex max-h-[80vh] w-full max-w-lg animate-pop flex-col rounded-2xl border border-white/10 bg-panel shadow-2xl"
+        className="flex max-h-[80vh] w-full max-w-lg animate-pop flex-col rounded-2xl border border-base bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-white/10 p-4">
+        <div className="flex items-center justify-between border-b border-base p-4">
           <h2 className="text-lg font-semibold">Your share links</h2>
-          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-slate-300 hover:bg-white/10">
+          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-muted hover:bg-surface-2">
             ✕
           </button>
         </div>
@@ -65,9 +65,9 @@ export default function ShareManager({ onClose }: { onClose: () => void }) {
         <div className="flex-1 overflow-y-auto p-4">
           {error && <p className="mb-3 text-sm text-rose-400">{error}</p>}
           {loading ? (
-            <p className="text-slate-400">Loading…</p>
+            <p className="text-muted">Loading…</p>
           ) : shares.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-400">
+            <p className="py-8 text-center text-sm text-muted">
               No share links yet. Select photos and tap “Create share link”.
             </p>
           ) : (
@@ -75,14 +75,14 @@ export default function ShareManager({ onClose }: { onClose: () => void }) {
               {shares.map((s) => (
                 <li
                   key={s.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/20 p-3"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-base bg-surface-2 p-3"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm">
                       {s.hasPassword && <span title="Password protected">🔐 </span>}
                       {s.itemCount} item{s.itemCount === 1 ? '' : 's'}
                     </p>
-                    <p className="truncate text-xs text-slate-500">
+                    <p className="truncate text-xs text-faint">
                       Created {formatDate(s.createdAt)}
                       {s.expiresAt ? ` · expires ${formatDate(s.expiresAt)}` : ''}
                     </p>
@@ -90,7 +90,7 @@ export default function ShareManager({ onClose }: { onClose: () => void }) {
                   <div className="flex shrink-0 items-center gap-2">
                     <button
                       onClick={() => copy(s)}
-                      className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5"
+                      className="rounded-lg border border-base px-3 py-1.5 text-xs hover:bg-surface-2"
                     >
                       {copiedId === s.id ? 'Copied!' : 'Copy'}
                     </button>

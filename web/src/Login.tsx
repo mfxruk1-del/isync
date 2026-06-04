@@ -29,10 +29,10 @@ export default function Login({ onAuthed }: { onAuthed: (u: User) => void }) {
             🔒
           </div>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight">Vault</h1>
-          <p className="mt-1 text-sm text-slate-400">Your private, lossless media vault</p>
+          <p className="mt-1 text-sm text-muted">Your private, lossless media vault</p>
         </div>
 
-        <label className="mb-1 block text-sm text-slate-300">Username</label>
+        <label className="mb-1 block text-sm text-muted">Username</label>
         <input
           className="field mb-4"
           value={username}
@@ -41,7 +41,7 @@ export default function Login({ onAuthed }: { onAuthed: (u: User) => void }) {
           onChange={(e) => setUsername(e.target.value)}
         />
 
-        <label className="mb-1 block text-sm text-slate-300">Password</label>
+        <label className="mb-1 block text-sm text-muted">Password</label>
         <input
           className="field mb-4"
           type="password"

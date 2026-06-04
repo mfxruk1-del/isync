@@ -3,8 +3,35 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* ---- Dark theme (default) ---- */
+  :root,
+  html.dark {
     color-scheme: dark;
+    --page-bg:
+      radial-gradient(900px 600px at 12% -10%, rgba(16, 185, 129, 0.1), transparent 60%),
+      radial-gradient(1100px 700px at 100% 0%, rgba(59, 96, 175, 0.16), transparent 55%), #0a0e16;
+    --text: #e7ecf5;
+    --muted: #97a3b6;
+    --faint: #6b7689;
+    --surface: #0f1729;
+    --surface-2: #161f33;
+    --border: rgba(255, 255, 255, 0.1);
+    --bar: rgba(10, 14, 22, 0.7);
+  }
+
+  /* ---- Light theme: fresh, clean, pale green ---- */
+  html.light {
+    color-scheme: light;
+    --page-bg:
+      radial-gradient(900px 600px at 12% -10%, rgba(16, 185, 129, 0.14), transparent 60%),
+      radial-gradient(1100px 700px at 100% 0%, rgba(132, 204, 168, 0.2), transparent 55%), #f1f7f3;
+    --text: #0f2018;
+    --muted: #5a6b61;
+    --faint: #8a978f;
+    --surface: #ffffff;
+    --surface-2: #e9f1ec;
+    --border: rgba(16, 44, 30, 0.12);
+    --bar: rgba(241, 247, 243, 0.8);
   }
 
   html,
@@ -15,41 +42,62 @@
 
   body {
     margin: 0;
-    background:
-      radial-gradient(900px 600px at 12% -10%, rgba(16, 185, 129, 0.1), transparent 60%),
-      radial-gradient(1100px 700px at 100% 0%, rgba(59, 96, 175, 0.16), transparent 55%),
-      #0a0e16;
+    background: var(--page-bg);
     background-attachment: fixed;
-    color: #e7ecf5;
+    color: var(--text);
     font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
-  /* Slim, subtle scrollbars */
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    scrollbar-color: var(--border) transparent;
   }
   *::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   *::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.14);
+    background: var(--border);
     border-radius: 999px;
-  }
-  *::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
   }
 
   ::selection {
-    background: rgba(16, 185, 129, 0.35);
+    background: rgba(16, 185, 129, 0.3);
   }
 }
 
 @layer components {
+  /* Semantic color helpers driven by the theme variables */
+  .text-muted {
+    color: var(--muted);
+  }
+  .text-faint {
+    color: var(--faint);
+  }
+  .text-base {
+    color: var(--text);
+  }
+  .bg-surface {
+    background-color: var(--surface);
+  }
+  .bg-surface-2 {
+    background-color: var(--surface-2);
+  }
+  .hover\:bg-surface-2:hover {
+    background-color: var(--surface-2);
+  }
+  .border-base {
+    border-color: var(--border);
+  }
+  .bg-bar {
+    background-color: var(--bar);
+  }
+
+  /* Buttons */
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
   }
@@ -57,20 +105,38 @@
     @apply btn bg-emerald-500 text-emerald-950 shadow-glow hover:bg-emerald-400;
   }
   .btn-ghost {
-    @apply btn border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10;
+    @apply btn;
+    border: 1px solid var(--border);
+    background-color: var(--surface-2);
+    color: var(--text);
   }
   .btn-danger {
-    @apply btn border border-rose-500/40 text-rose-300 hover:bg-rose-500/10;
+    @apply btn border border-rose-500/40 text-rose-500 hover:bg-rose-500/10;
   }
-  /* Small pill-style control used in headers/toolbars */
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-white/10 active:scale-95;
+    @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition active:scale-95;
+    border: 1px solid var(--border);
+    background-color: var(--surface-2);
+    color: var(--text);
   }
   .field {
-    @apply w-full rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/15;
+    @apply w-full rounded-xl px-3.5 py-2.5 text-sm outline-none transition;
+    border: 1px solid var(--border);
+    background-color: var(--surface-2);
+    color: var(--text);
+  }
+  .field::placeholder {
+    color: var(--faint);
+  }
+  .field:focus {
+    border-color: rgba(16, 185, 129, 0.6);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
   }
   .panel {
-    @apply rounded-2xl border border-white/10 bg-panel/90 shadow-2xl backdrop-blur-xl;
+    @apply rounded-2xl shadow-2xl;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    backdrop-filter: blur(16px);
   }
   .overlay {
     @apply fixed inset-0 z-50 flex bg-black/70 p-4 backdrop-blur-sm;

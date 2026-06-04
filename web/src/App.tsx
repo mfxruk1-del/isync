@@ -20,7 +20,7 @@ function VaultApp() {
   }, []);
 
   if (loading) {
-    return <div className="flex h-full items-center justify-center text-slate-400">Loading…</div>;
+    return <div className="flex h-full items-center justify-center text-muted">Loading…</div>;
   }
   if (!user) return <Login onAuthed={setUser} />;
   return <Gallery user={user} onLogout={() => setUser(null)} />;

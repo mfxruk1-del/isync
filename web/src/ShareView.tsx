@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { api, formatBytes, type ShareResponse } from './api';
 import Viewer, { type ViewerItem } from './Viewer';
 import InstallPrompt from './InstallPrompt';
+import ThemeToggle from './ThemeToggle';
 
 export default function ShareView() {
   const { token = '' } = useParams();
@@ -46,7 +47,7 @@ export default function ShareView() {
   }
 
   if (loading) {
-    return <div className="flex h-full items-center justify-center text-slate-400">Loading…</div>;
+    return <div className="flex h-full items-center justify-center text-muted">Loading…</div>;
   }
 
   if (error || !resp) {
@@ -67,7 +68,7 @@ export default function ShareView() {
         <form onSubmit={unlock} className="panel w-full max-w-sm animate-pop p-8 text-center">
           <div className="text-4xl">🔐</div>
           <h1 className="mt-2 text-xl font-semibold">Password required</h1>
-          <p className="mt-1 text-sm text-slate-400">This link is password-protected.</p>
+          <p className="mt-1 text-sm text-muted">This link is password-protected.</p>
           <input
             type="password"
             autoFocus
@@ -104,13 +105,16 @@ export default function ShareView() {
 
   return (
     <div className="mx-auto min-h-full max-w-5xl animate-fade px-4 pb-16 pt-6">
+      <div className="mb-2 flex justify-end">
+        <ThemeToggle />
+      </div>
       <InstallPrompt />
       <header className="mb-6 text-center">
         <div className="flex items-center justify-center gap-2">
           <span className="text-2xl">🔒</span>
           <h1 className="text-xl font-semibold">Shared with you</h1>
         </div>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-muted">
           {resp.files.length} item{resp.files.length === 1 ? '' : 's'} · download in original quality
         </p>
       </header>
@@ -120,7 +124,7 @@ export default function ShareView() {
           <button
             key={f.id}
             onClick={() => setActiveIndex(i)}
-            className="group relative aspect-square overflow-hidden rounded-xl bg-white/5 ring-1 ring-white/5 transition hover:ring-white/20"
+            className="group relative aspect-square overflow-hidden rounded-xl bg-surface-2 ring-1 ring-white/5 transition hover:ring-white/20"
             title={f.name}
           >
             {f.hasThumb ? (
@@ -131,7 +135,7 @@ export default function ShareView() {
                 className="h-full w-full object-cover transition group-hover:scale-105"
               />
             ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center text-xs text-slate-400">
+              <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center text-xs text-muted">
                 <span className="text-2xl">📄</span>
                 <span className="mt-1 line-clamp-2 break-all">{f.name}</span>
               </div>
@@ -143,7 +147,7 @@ export default function ShareView() {
                 </span>
               </span>
             )}
-            <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-slate-200">
+            <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-base">
               {formatBytes(f.size)}
             </span>
           </button>

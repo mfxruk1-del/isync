@@ -15,6 +15,7 @@ import ShareLinkModal from './ShareLinkModal';
 import ShareCreateDialog, { type ShareOptions } from './ShareCreateDialog';
 import InstallPrompt from './InstallPrompt';
 import AdminPanel from './AdminPanel';
+import ThemeToggle from './ThemeToggle';
 
 export default function Gallery({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [files, setFiles] = useState<VaultFile[]>([]);
@@ -246,20 +247,21 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
     >
       {dragging && (
         <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-emerald-500/10 backdrop-blur-sm">
-          <div className="rounded-2xl border-2 border-dashed border-emerald-400/70 bg-ink/80 px-8 py-6 text-center">
+          <div className="rounded-2xl border-2 border-dashed border-emerald-400/70 bg-bar px-8 py-6 text-center">
             <div className="text-4xl">⬇️</div>
             <p className="mt-2 text-lg font-medium text-emerald-300">Drop to upload</p>
-            <p className="text-xs text-slate-400">Images & videos · up to {MAX_BATCH} at once</p>
+            <p className="text-xs text-muted">Images & videos · up to {MAX_BATCH} at once</p>
           </div>
         </div>
       )}
       {/* Header */}
-      <header className="sticky top-0 z-20 -mx-4 mb-4 flex items-center justify-between border-b border-white/5 bg-ink/70 px-4 py-3 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 -mx-4 mb-4 flex items-center justify-between border-b border-base bg-bar px-4 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🔒</span>
           <h1 className="text-lg font-semibold tracking-tight">Vault</h1>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {user.isAdmin && (
             <button onClick={() => setShowAdmin(true)} className="chip">
               People
@@ -279,7 +281,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
       {/* Search */}
       <div className="mb-3">
         <div className="relative">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">
             🔍
           </span>
           <input
@@ -292,7 +294,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
             <button
               onClick={() => setQuery('')}
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-slate-400 hover:bg-white/5"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-muted hover:bg-surface-2"
             >
               ✕
             </button>
@@ -301,7 +303,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
       </div>
 
       {pending > 0 && (
-        <div className="mb-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-400">
+        <div className="mb-3 rounded-lg border border-base bg-surface-2 px-3 py-2 text-xs text-muted">
           🧠 Making {pending} item{pending === 1 ? '' : 's'} searchable… (search works as
           they finish)
         </div>
@@ -321,10 +323,10 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
 
       {uploadStatus && (
         <div className="mb-4">
-          <div className="mb-1 text-sm text-slate-400">
+          <div className="mb-1 text-sm text-muted">
             Uploading {uploadStatus.completed}/{uploadStatus.total} · {uploadStatus.percent}%
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
             <div
               className="h-full bg-emerald-500 transition-all"
               style={{ width: `${uploadStatus.percent}%` }}
@@ -336,11 +338,11 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
       {/* Toolbar */}
       {displayed.length > 0 && (
         <div className="mb-3 flex items-center justify-between text-sm">
-          <span className="text-slate-400">
+          <span className="text-muted">
             {isSearch ? `${displayed.length} result${displayed.length === 1 ? '' : 's'}` : `${files.length} item(s)`}
           </span>
           {selecting ? (
-            <button onClick={cancelSelecting} className="text-slate-300 hover:underline">
+            <button onClick={cancelSelecting} className="text-muted hover:underline">
               Cancel
             </button>
           ) : (
@@ -353,20 +355,20 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
 
       {/* Gallery */}
       {loading ? (
-        <p className="text-slate-400">Loading…</p>
+        <p className="text-muted">Loading…</p>
       ) : isSearch && searching && displayed.length === 0 ? (
-        <p className="mt-16 text-center text-slate-400">Searching…</p>
+        <p className="mt-16 text-center text-muted">Searching…</p>
       ) : isSearch && displayed.length === 0 ? (
-        <div className="mt-16 text-center text-slate-400">
+        <div className="mt-16 text-center text-muted">
           <p className="text-lg">No matches for “{query.trim()}”</p>
           <p className="mt-1 text-sm">Try a different word, or wait for indexing to finish.</p>
         </div>
       ) : !isSearch && files.length === 0 ? (
-        <div className="mt-20 text-center text-slate-400">
-          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 text-3xl">
+        <div className="mt-20 text-center text-muted">
+          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-2 text-3xl">
             🖼️
           </div>
-          <p className="text-lg font-medium text-slate-200">No photos yet</p>
+          <p className="text-lg font-medium text-base">No photos yet</p>
           <p className="mt-1 text-sm">Tap the + button to upload your first lossless image.</p>
         </div>
       ) : (
@@ -381,7 +383,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
                   e.preventDefault();
                   startSelecting(f.id);
                 }}
-                className={`group relative aspect-square overflow-hidden rounded-xl bg-white/5 ring-1 transition ${
+                className={`group relative aspect-square overflow-hidden rounded-xl bg-surface-2 ring-1 transition ${
                   isSel ? 'ring-2 ring-emerald-400' : 'ring-white/5 hover:ring-white/20'
                 }`}
                 title={f.name}
@@ -394,7 +396,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
                     className="h-full w-full object-cover transition group-hover:scale-105"
                   />
                 ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center text-xs text-slate-400">
+                  <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center text-xs text-muted">
                     <span className="text-2xl">📄</span>
                     <span className="mt-1 line-clamp-2 break-all">{f.name}</span>
                   </div>
@@ -415,7 +417,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
                     {isSel ? '✓' : ''}
                   </span>
                 )}
-                <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-slate-200">
+                <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-base">
                   {formatBytes(f.size)}
                 </span>
               </button>
@@ -434,7 +436,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
                   setShowUploadMenu(false);
                   inputRef.current?.click();
                 }}
-                className="rounded-full border border-white/10 bg-panel px-4 py-2 text-sm shadow-lg hover:bg-white/5"
+                className="rounded-full border border-base bg-surface px-4 py-2 text-sm shadow-lg hover:bg-surface-2"
               >
                 🖼️ Photos &amp; videos
               </button>
@@ -443,7 +445,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
                   setShowUploadMenu(false);
                   cameraRef.current?.click();
                 }}
-                className="rounded-full border border-white/10 bg-panel px-4 py-2 text-sm shadow-lg hover:bg-white/5"
+                className="rounded-full border border-base bg-surface px-4 py-2 text-sm shadow-lg hover:bg-surface-2"
               >
                 📷 Take photo/video
               </button>
@@ -470,9 +472,9 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
 
       {/* Selection action bar */}
       {selecting && (
-        <div className="fixed inset-x-0 bottom-0 border-t border-white/10 bg-ink/95 p-4 backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 border-t border-base bg-bar p-4 backdrop-blur">
           <div className="mx-auto flex max-w-5xl items-center justify-between">
-            <span className="text-sm text-slate-300">{selected.size} selected</span>
+            <span className="text-sm text-muted">{selected.size} selected</span>
             <button
               onClick={() => setShowCreate(true)}
               disabled={selected.size === 0}

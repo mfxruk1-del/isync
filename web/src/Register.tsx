@@ -34,7 +34,7 @@ export default function Register() {
   }
 
   if (checking) {
-    return <div className="flex h-full items-center justify-center text-slate-400">Loading…</div>;
+    return <div className="flex h-full items-center justify-center text-muted">Loading…</div>;
   }
 
   if (!valid) {
@@ -57,10 +57,10 @@ export default function Register() {
         <div className="mb-6 text-center">
           <div className="text-4xl">🎉</div>
           <h1 className="mt-2 text-2xl font-semibold">Create your account</h1>
-          <p className="mt-1 text-sm text-slate-400">You've been invited to Vault.</p>
+          <p className="mt-1 text-sm text-muted">You've been invited to Vault.</p>
         </div>
 
-        <label className="mb-1 block text-sm text-slate-300">Choose a username</label>
+        <label className="mb-1 block text-sm text-muted">Choose a username</label>
         <input
           className="field mb-4"
           value={username}
@@ -69,7 +69,7 @@ export default function Register() {
           onChange={(e) => setUsername(e.target.value)}
         />
 
-        <label className="mb-1 block text-sm text-slate-300">Choose a password</label>
+        <label className="mb-1 block text-sm text-muted">Choose a password</label>
         <input
           className="field mb-1"
           type="password"
@@ -77,7 +77,7 @@ export default function Register() {
           autoComplete="new-password"
           onChange={(e) => setPassword(e.target.value)}
         />
-        <p className="mb-4 text-xs text-slate-500">At least 8 characters.</p>
+        <p className="mb-4 text-xs text-faint">At least 8 characters.</p>
 
         {error && <p className="mb-4 text-sm text-rose-400">{error}</p>}
 

@@ -24,13 +24,13 @@ export default function ShareLinkModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6" onClick={onClose}>
       <div
-        className="w-full max-w-md animate-pop rounded-2xl border border-white/10 bg-panel p-6 shadow-2xl"
+        className="w-full max-w-md animate-pop rounded-2xl border border-base bg-surface p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 text-center">
           <div className="text-3xl">🔗</div>
           <h2 className="mt-2 text-lg font-semibold">Share link created</h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-muted">
             Anyone with this link can preview and download {share.itemCount} item
             {share.itemCount === 1 ? '' : 's'} — and nothing else from your vault.
           </p>
@@ -41,7 +41,7 @@ export default function ShareLinkModal({
             readOnly
             value={url}
             onFocus={(e) => e.target.select()}
-            className="flex-1 truncate rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm"
+            className="flex-1 truncate rounded-lg border border-base bg-surface-2 px-3 py-2 text-sm"
           />
           <button
             onClick={copy}
@@ -53,7 +53,7 @@ export default function ShareLinkModal({
 
         <button
           onClick={onClose}
-          className="w-full rounded-lg border border-white/10 py-2 text-sm text-slate-300 hover:bg-white/5"
+          className="w-full rounded-lg border border-base py-2 text-sm text-muted hover:bg-surface-2"
         >
           Done
         </button>

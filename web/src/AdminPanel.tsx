@@ -70,12 +70,12 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
       <div
-        className="flex max-h-[85vh] w-full max-w-lg animate-pop flex-col rounded-2xl border border-white/10 bg-panel shadow-2xl"
+        className="flex max-h-[85vh] w-full max-w-lg animate-pop flex-col rounded-2xl border border-base bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-white/10 p-4">
+        <div className="flex items-center justify-between border-b border-base p-4">
           <h2 className="text-lg font-semibold">People</h2>
-          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-slate-300 hover:bg-white/10">
+          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-muted hover:bg-surface-2">
             ✕
           </button>
         </div>
@@ -86,7 +86,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
           {/* Invite section */}
           <section>
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-slate-300">Invite someone</h3>
+              <h3 className="text-sm font-medium text-muted">Invite someone</h3>
               <button
                 onClick={createInvite}
                 disabled={creating}
@@ -95,29 +95,29 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 {creating ? 'Creating…' : '+ New invite link'}
               </button>
             </div>
-            <p className="mb-3 text-xs text-slate-500">
+            <p className="mb-3 text-xs text-faint">
               Send an invite link to a family member or friend. They pick their own
               username &amp; password and get their own private library.
             </p>
             {loading ? (
-              <p className="text-sm text-slate-400">Loading…</p>
+              <p className="text-sm text-muted">Loading…</p>
             ) : pending.length === 0 ? (
-              <p className="text-sm text-slate-500">No unused invites.</p>
+              <p className="text-sm text-faint">No unused invites.</p>
             ) : (
               <ul className="space-y-2">
                 {pending.map((i) => (
                   <li
                     key={i.id}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/20 p-2"
+                    className="flex items-center justify-between gap-2 rounded-lg border border-base bg-surface-2 p-2"
                   >
-                    <span className="truncate text-xs text-slate-400">
+                    <span className="truncate text-xs text-muted">
                       {window.location.origin}
                       {i.path}
                     </span>
                     <div className="flex shrink-0 gap-1">
                       <button
                         onClick={() => copy(i)}
-                        className="rounded-lg border border-white/10 px-2.5 py-1 text-xs hover:bg-white/5"
+                        className="rounded-lg border border-base px-2.5 py-1 text-xs hover:bg-surface-2"
                       >
                         {copiedId === i.id ? 'Copied!' : 'Copy'}
                       </button>
@@ -136,22 +136,22 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
 
           {/* Members section */}
           <section>
-            <h3 className="mb-2 text-sm font-medium text-slate-300">Members</h3>
+            <h3 className="mb-2 text-sm font-medium text-muted">Members</h3>
             {loading ? (
-              <p className="text-sm text-slate-400">Loading…</p>
+              <p className="text-sm text-muted">Loading…</p>
             ) : (
               <ul className="space-y-2">
                 {members.map((m) => (
                   <li
                     key={m.id}
-                    className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 p-3"
+                    className="flex items-center justify-between rounded-lg border border-base bg-surface-2 p-3"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm">
                         {m.username}
                         {m.isAdmin && <span className="ml-2 text-xs text-emerald-400">admin</span>}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-faint">
                         {m.fileCount} item{m.fileCount === 1 ? '' : 's'} · joined {formatDate(m.createdAt)}
                       </p>
                     </div>
