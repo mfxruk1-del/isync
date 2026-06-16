@@ -12,6 +12,7 @@ export interface VaultFile {
   height: number | null;
   hasThumb: boolean;
   createdAt: number;
+  deletedAt?: number | null;
 }
 
 export interface User {
@@ -119,6 +120,12 @@ export const api = {
     ),
   list: () => request<{ files: VaultFile[] }>('GET', '/api/files'),
   remove: (id: string) => request<void>('DELETE', `/api/files/${id}`),
+
+  // --- Trash (soft delete) ---
+  listTrash: () => request<{ files: VaultFile[] }>('GET', '/api/trash'),
+  restore: (id: string) => request<VaultFile>('POST', `/api/files/${id}/restore`),
+  deletePermanent: (id: string) => request<void>('DELETE', `/api/files/${id}/permanent`),
+  emptyTrash: () => request<void>('DELETE', '/api/trash'),
   verifyOnServer: (id: string) =>
     request<{ ok: boolean; expected: string; actual: string }>(
       'GET',

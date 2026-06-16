@@ -22,7 +22,7 @@ function getSharedFile(shareId: string, fileId: string): FileRow | undefined {
     .prepare(
       `SELECT f.* FROM files f
        JOIN share_items si ON si.file_id = f.id
-       WHERE si.share_id = ? AND f.id = ?`
+       WHERE si.share_id = ? AND f.id = ? AND f.deleted_at IS NULL`
     )
     .get(shareId, fileId) as FileRow | undefined;
 }
@@ -76,7 +76,7 @@ export default async function publicRoutes(app: FastifyInstance) {
       .prepare(
         `SELECT f.* FROM files f
          JOIN share_items si ON si.file_id = f.id
-         WHERE si.share_id = ?
+         WHERE si.share_id = ? AND f.deleted_at IS NULL
          ORDER BY f.created_at DESC`
       )
       .all(share.id) as FileRow[];

@@ -16,6 +16,7 @@ import ShareCreateDialog, { type ShareOptions } from './ShareCreateDialog';
 import InstallPrompt from './InstallPrompt';
 import AdminPanel from './AdminPanel';
 import ThemeToggle from './ThemeToggle';
+import TrashView from './TrashView';
 
 export default function Gallery({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [files, setFiles] = useState<VaultFile[]>([]);
@@ -36,6 +37,8 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
   const [newShare, setNewShare] = useState<Share | null>(null);
   const [showShares, setShowShares] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showTrash, setShowTrash] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   // Search + indexing state
   const [query, setQuery] = useState('');
@@ -200,7 +203,7 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
     if (activeIndex === null) return;
     const f = displayed[activeIndex];
     if (!f) return;
-    if (!confirm(`Delete "${f.name}"? This cannot be undone.`)) return;
+    if (!confirm(`Move "${f.name}" to Trash?`)) return;
     try {
       await api.remove(f.id);
       const wasSearch = results !== null;
@@ -262,17 +265,56 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          {user.isAdmin && (
-            <button onClick={() => setShowAdmin(true)} className="chip">
-              People
+          <div className="relative">
+            <button onClick={() => setShowMenu((v) => !v)} className="chip" aria-label="Menu">
+              ⋯
             </button>
-          )}
-          <button onClick={() => setShowShares(true)} className="chip">
-            Links
-          </button>
-          <button onClick={logout} className="chip">
-            Sign out
-          </button>
+            {showMenu && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setShowMenu(false)} />
+                <div className="panel absolute right-0 top-full z-30 mt-2 w-44 p-1 text-sm">
+                  {user.isAdmin && (
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        setShowAdmin(true);
+                      }}
+                      className="block w-full rounded-lg px-3 py-2 text-left hover:bg-surface-2"
+                    >
+                      👥 People
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      setShowShares(true);
+                    }}
+                    className="block w-full rounded-lg px-3 py-2 text-left hover:bg-surface-2"
+                  >
+                    🔗 Links
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      setShowTrash(true);
+                    }}
+                    className="block w-full rounded-lg px-3 py-2 text-left hover:bg-surface-2"
+                  >
+                    🗑️ Trash
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      logout();
+                    }}
+                    className="block w-full rounded-lg px-3 py-2 text-left hover:bg-surface-2"
+                  >
+                    ↩️ Sign out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -506,6 +548,14 @@ export default function Gallery({ user, onLogout }: { user: User; onLogout: () =
       {newShare && <ShareLinkModal share={newShare} onClose={() => setNewShare(null)} />}
       {showShares && <ShareManager onClose={() => setShowShares(false)} />}
       {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
+      {showTrash && (
+        <TrashView
+          onClose={() => {
+            setShowTrash(false);
+            refresh().catch(() => {});
+          }}
+        />
+      )}
     </div>
   );
 }

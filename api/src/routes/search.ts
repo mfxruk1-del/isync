@@ -33,7 +33,7 @@ export default async function searchRoutes(app: FastifyInstance) {
     if (!query) return { files: [] };
 
     const rows = db
-      .prepare('SELECT * FROM files WHERE owner_id = ?')
+      .prepare('SELECT * FROM files WHERE owner_id = ? AND deleted_at IS NULL')
       .all(ownerId) as FileRow[];
 
     const ql = query.toLowerCase();

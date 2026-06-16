@@ -13,6 +13,7 @@ import uploadRoutes from './routes/uploads';
 import adminRoutes from './routes/admin';
 import searchRoutes from './routes/search';
 import { startIndexer } from './indexer';
+import { startTrashPurger } from './purge';
 
 const app = Fastify({
   logger: true,
@@ -60,6 +61,8 @@ async function main() {
 
   // Kick off background AI indexing of any not-yet-indexed files.
   startIndexer();
+  // Auto-purge Trash items older than 30 days.
+  startTrashPurger();
 }
 
 main().catch((err) => {

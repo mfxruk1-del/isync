@@ -26,6 +26,7 @@ function toClient(f: FileRow) {
     height: f.height,
     hasThumb: !!f.has_thumb,
     createdAt: f.created_at,
+    deletedAt: f.deleted_at,
   };
 }
 
@@ -68,11 +69,24 @@ export default async function fileRoutes(app: FastifyInstance) {
     return { files: saved };
   });
 
-  // --- List the owner's files (newest first) ---
+  // --- List the owner's files (newest first), excluding trashed ---
   app.get('/api/files', async (req) => {
     const ownerId = (req as any).userId as string;
     const rows = db
-      .prepare('SELECT * FROM files WHERE owner_id = ? ORDER BY created_at DESC')
+      .prepare(
+        'SELECT * FROM files WHERE owner_id = ? AND deleted_at IS NULL ORDER BY created_at DESC'
+      )
+      .all(ownerId) as FileRow[];
+    return { files: rows.map(toClient) };
+  });
+
+  // --- List items in the Trash (most recently deleted first) ---
+  app.get('/api/trash', async (req) => {
+    const ownerId = (req as any).userId as string;
+    const rows = db
+      .prepare(
+        'SELECT * FROM files WHERE owner_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC'
+      )
       .all(ownerId) as FileRow[];
     return { files: rows.map(toClient) };
   });
@@ -117,14 +131,47 @@ export default async function fileRoutes(app: FastifyInstance) {
     return { ok: actual === file.sha256, expected: file.sha256, actual };
   });
 
-  // --- Delete a file (original + thumbnail + metadata) ---
+  // --- Move a file to the Trash (soft delete; restorable for 30 days) ---
   app.delete('/api/files/:id', async (req, reply) => {
+    const ownerId = (req as any).userId as string;
+    const { id } = req.params as { id: string };
+    const file = getOwnedFile(id, ownerId);
+    if (!file) return reply.code(404).send({ error: 'Not found' });
+    db.prepare('UPDATE files SET deleted_at = ? WHERE id = ?').run(Date.now(), id);
+    return reply.code(204).send();
+  });
+
+  // --- Restore a file from the Trash ---
+  app.post('/api/files/:id/restore', async (req, reply) => {
+    const ownerId = (req as any).userId as string;
+    const { id } = req.params as { id: string };
+    const file = getOwnedFile(id, ownerId);
+    if (!file) return reply.code(404).send({ error: 'Not found' });
+    db.prepare('UPDATE files SET deleted_at = NULL WHERE id = ?').run(id);
+    return toClient(getOwnedFile(id, ownerId)!);
+  });
+
+  // --- Permanently delete a file (original + thumbnail + metadata) ---
+  app.delete('/api/files/:id/permanent', async (req, reply) => {
     const ownerId = (req as any).userId as string;
     const { id } = req.params as { id: string };
     const file = getOwnedFile(id, ownerId);
     if (!file) return reply.code(404).send({ error: 'Not found' });
     await deleteStoredFile(id);
     db.prepare('DELETE FROM files WHERE id = ?').run(id);
+    return reply.code(204).send();
+  });
+
+  // --- Empty the Trash (permanently delete everything in it) ---
+  app.delete('/api/trash', async (req, reply) => {
+    const ownerId = (req as any).userId as string;
+    const rows = db
+      .prepare('SELECT id FROM files WHERE owner_id = ? AND deleted_at IS NOT NULL')
+      .all(ownerId) as { id: string }[];
+    for (const r of rows) {
+      await deleteStoredFile(r.id);
+      db.prepare('DELETE FROM files WHERE id = ?').run(r.id);
+    }
     return reply.code(204).send();
   });
 }

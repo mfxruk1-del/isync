@@ -96,6 +96,10 @@ if (!fileCols2.some((c) => c.name === 'ocr_text')) {
 if (!fileCols2.some((c) => c.name === 'indexed_at')) {
   db.exec('ALTER TABLE files ADD COLUMN indexed_at INTEGER');
 }
+// Soft-delete: when set, the file is in the Trash (auto-purged after 30 days).
+if (!fileCols2.some((c) => c.name === 'deleted_at')) {
+  db.exec('ALTER TABLE files ADD COLUMN deleted_at INTEGER');
+}
 
 // --- Types describing a row, for convenience ---
 export interface UserRow {
@@ -129,6 +133,7 @@ export interface FileRow {
   embedding: Buffer | null;
   ocr_text: string | null;
   indexed_at: number | null;
+  deleted_at: number | null;
 }
 
 export interface ShareRow {
